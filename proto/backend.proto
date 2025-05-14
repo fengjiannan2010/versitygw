@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package backend;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "backend_enum.proto";
+
+// 定义 Backend 服务
+service BackendService {
+  // 关闭代理
+  rpc Shutdown(ShutdownInput) returns (ShutdownOutput);
+  // 获取代理类型
+  rpc GetGateWayType(google.protobuf.Empty) returns (GetGateWayTypeOutput);
+
+  rpc ChangeBucketOwner(ChangeBucketOwnerInput) returns (ChangeBucketOwnerOutput);
+
+  rpc ListBucketsAndOwners(google.protobuf.Empty) returns (ListBucketsAndOwnersOutput);
+
+  // 中止分段上传
+  rpc AbortMultipartUpload(AbortMultipartUploadInput) returns (AbortMultipartUploadOutput);
+  // 完成分段上传
+  rpc CompleteMultipartUpload(CompleteMultipartUploadInput) returns (CompleteMultipartUploadOutput);
+  // 复制对象
+  rpc CopyObject(CopyObjectInput) returns (CopyObjectOutput);
+  // 创建桶
+  rpc CreateBucket(CreateBucketInput) returns (CreateBucketOutput);
+  // 创建多部分上传
+  rpc CreateMultipartUpload(CreateMultipartUploadInput) returns (CreateMultipartUploadOutput);
+  // 删除桶
+  rpc DeleteBucket(DeleteBucketInput) returns (DeleteBucketOutput);
+  // 获取存储桶列表
+  rpc ListBuckets(ListBucketsInput) returns (ListBucketsOutput);
+
+  rpc HeadBucket(HeadBucketInput) returns (HeadBucketOutput);
+
+  rpc GetBucketAcl(GetBucketAclInput) returns (GetBucketAclOutput);
+
+  rpc PutBucketAcl(PutBucketAclInput) returns (PutBucketAclOutput);
+
+  rpc PutBucketVersioning(PutBucketVersioningInput) returns (PutBucketVersioningOutput);
+
+  rpc GetBucketVersioning(GetBucketVersioningInput) returns (GetBucketVersioningOutput);
+
+  rpc PutBucketPolicy(PutBucketPolicyInput) returns (PutBucketPolicyOutput);
+
+  rpc GetBucketPolicy(GetBucketPolicyInput) returns (GetBucketPolicyOutput);
+
+  rpc DeleteBucketPolicy(DeleteBucketPolicyInput) returns (DeleteBucketPolicyOutput);
+
+  rpc PutBucketOwnershipControls(PutBucketOwnershipControlsInput) returns (PutBucketOwnershipControlsOutput);
+
+  rpc GetBucketOwnershipControls(GetBucketOwnershipControlsInput) returns (GetBucketOwnershipControlsOutput);
+
+  rpc DeleteBucketOwnershipControls(DeleteBucketOwnershipControlsInput) returns (DeleteBucketOwnershipControlsOutput);
+
+  rpc ListMultipartUploads(ListMultipartUploadsInput) returns (ListMultipartUploadsOutput);
+
+  rpc ListParts(ListPartsInput) returns (ListPartsOutput);
+
+  rpc UploadPart(UploadPartInput) returns (UploadPartOutput);
+
+  rpc UploadPartCopy(UploadPartCopyInput) returns (UploadPartCopyInput);
+
+  // standard object operations
+  rpc PutObject(PutObjectInput) returns (PutObjectOutput);
+
+  rpc HeadObject(HeadObjectInput) returns (HeadObjectInput);
+
+  rpc GetObject(GetObjectInput) returns (GetObjectOutput);
+
+  rpc GetObjectAcl(GetObjectAclInput) returns (GetObjectAclOutput);
+
+  rpc GetObjectAttributes(GetObjectAttributesInput) returns (GetObjectAttributesOutput);
+
+  rpc ListObjects(ListObjectsInput) returns (ListObjectsOutput);
+
+  rpc ListObjectsV2(ListObjectsV2Input) returns (ListObjectsV2Output);
+
+  rpc DeleteObject(DeleteObjectInput) returns (DeleteObjectOutput);
+
+  rpc DeleteObjects(DeleteObjectsInput) returns (DeleteObjectsOutput);
+
+  rpc PutObjectAcl(PutObjectAclInput) returns (PutObjectAclOutput);
+
+  rpc ListObjectVersions(ListObjectVersionsInput) returns (ListObjectVersionsOutput);
+
+  rpc RestoreObject(RestoreObjectInput) returns (RestoreObjectOutput);
+
+  rpc GetBucketTagging(GetBucketTaggingInput) returns (GetBucketTaggingOutput);
+
+  rpc PutBucketTagging(PutBucketTaggingInput) returns (PutBucketTaggingOutput);
+
+  rpc DeleteBucketTagging(DeleteBucketTaggingInput) returns (DeleteBucketTaggingOutput);
+
+  rpc GetObjectTagging(GetObjectTaggingInput) returns (GetObjectTaggingOutput);
+
+  rpc PutObjectTagging(PutObjectTaggingInput) returns (PutObjectTaggingOutput);
+
+  rpc DeleteObjectTagging(DeleteObjectTaggingInput) returns (DeleteObjectTaggingOutput);
+
+  rpc PutObjectLockConfiguration(PutObjectLockConfigurationInput) returns (PutObjectLockConfigurationOutput);
+
+  rpc GetObjectLockConfiguration(GetObjectLockConfigurationInput) returns (GetObjectLockConfigurationOutput);
+
+  rpc PutObjectRetention(PutObjectRetentionInput) returns (PutObjectRetentionOutput);
+
+  rpc GetObjectRetention(GetObjectRetentionInput) returns (GetObjectRetentionOutput);
+
+  rpc PutObjectLegalHold(PutObjectLegalHoldInput) returns (PutObjectLegalHoldOutput);
+
+  rpc GetObjectLegalHold(GetObjectLegalHoldInput) returns (GetObjectLegalHoldOutput);
+}

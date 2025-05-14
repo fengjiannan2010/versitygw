@@ -1,0 +1,2428 @@
+syntax = "proto3";
+
+package backend;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+
+message ShutdownInput{
+  Metadata resultMetadata = 1;
+}
+
+message ShutdownOutput{
+  Metadata resultMetadata = 1;
+}
+
+message GetGateWayTypeOutput{
+  string gatewayType = 1;
+}
+
+
+// Bucket相关消息
+message ListBucketsInput {
+  string owner = 1;
+  bool isAdmin = 2;
+}
+
+message ListBucketsOutput {
+  repeated Bucket buckets = 1;
+  Owner owner = 2;
+  Metadata resultMetadata = 3;
+}
+
+// 相关的消息定义
+message Bucket {
+  string name = 1;
+  google.protobuf.Timestamp creationDate = 2;
+}
+
+// 头部桶的输入
+message HeadBucketInput {
+
+  // The bucket name.
+  // This member is required.
+  string bucket = 1;
+
+  // The account ID of the expected bucket owner.
+  // If the account ID that you provide does not match the actual owner of the bucket,
+  // the request fails with the HTTP status code 403 Forbidden (access denied).
+  string expectedBucketOwner = 2;
+}
+
+// 头部桶的输出
+message HeadBucketOutput {
+
+  // Indicates whether the bucket name used in the request is an access point alias.
+  // This functionality is not supported for directory buckets.
+  bool accessPointAlias = 1;
+
+  // The name of the location where the bucket will be created.
+  // For directory buckets, the AZ ID of the Availability Zone where the bucket is
+  // created. An example AZ ID value is usw2-az1.
+  // This functionality is only supported by directory buckets.
+  string bucketLocationName = 2;
+
+  // The type of location where the bucket is created.
+  // This functionality is only supported by directory buckets.
+  LocationType bucketLocationType = 3;
+
+  // The Region that the bucket is located.
+  // This functionality is not supported for directory buckets.
+  string bucketRegion = 4;
+
+  // Metadata pertaining to the operation's result.
+  // Metadata can include key-value pairs and other information about the operation.
+  Metadata resultMetadata = 5;
+}
+
+// Metadata 表示操作结果的元数据
+message Metadata {
+  repeated MetadataEntry entries = 1;
+}
+
+// MetadataEntry 表示元数据中的一个键值对
+message MetadataEntry {
+  string key = 1;
+  string value = 2;
+}
+
+// 获取桶的ACL输入
+message GetBucketAclInput {
+  // The bucket name.
+  // This member is required.
+  string bucket = 1;
+
+  // The account ID of the expected bucket owner.
+  // If the account ID that you provide does not match the actual owner of the bucket,
+  // the request fails with the HTTP status code 403 Forbidden (access denied).
+  string expectedBucketOwner = 2;
+}
+
+// 获取桶的ACL输出
+message GetBucketAclOutput {
+
+  // A list of grants.
+  repeated Grant grants = 1;
+
+  // Container for the bucket owner's display name and ID.
+  Owner owner = 2;
+
+  // Metadata pertaining to the operation's result.
+  Metadata resultMetadata = 3;
+}
+
+message Grant {
+  Grantee grantee = 1;
+  Permission permission = 2;
+}
+
+message Grantee {
+  Type type = 1;
+  string id = 2;
+  string uri = 3;
+  string displayName = 4;
+  string emailAddress = 5;
+}
+
+message Owner {
+  string id = 1;
+  string displayName = 2;
+}
+
+// 创建桶的请求
+message CreateBucketInput {
+
+  // The name of the bucket to create.
+  // This member is required.
+  string bucket = 1;
+
+  // The canned ACL to apply to the bucket.
+  BucketCannedACL acl = 2;
+
+  // The configuration information for the bucket.
+  CreateBucketConfiguration createBucketConfiguration = 3;
+
+  // Allows grantee the read, write, read ACP, and write ACP permissions on the bucket.
+  string grantFullControl = 4;
+
+  // Allows grantee to list the objects in the bucket.
+  string grantRead = 5;
+
+  // Allows grantee to read the bucket ACL.
+  string grantReadACP = 6;
+
+  // Allows grantee to create new objects in the bucket.
+  string grantWrite = 7;
+
+  // Allows grantee to write the ACL for the applicable bucket.
+  string grantWriteACP = 8;
+
+  // Specifies whether you want S3 Object Lock to be enabled for the new bucket.
+  bool objectLockEnabledForBucket = 9;
+
+  // The container element for object ownership for a bucket's ownership controls.
+  ObjectOwnership objectOwnership = 10;
+
+  bytes defaultACL = 30;
+}
+
+message CreateBucketOutput{
+  string location = 1;
+  Metadata resultMetadata = 2;
+}
+
+message CreateBucketConfiguration{
+  BucketInfo bucket = 1;
+  LocationInfo location = 2;
+  BucketLocationConstraint locationConstraint = 3;
+}
+
+message BucketInfo{
+  DataRedundancy dataRedundancy = 1;
+  BucketType type = 2;
+}
+
+message LocationInfo{
+  string name = 1;
+  LocationType type = 2;
+}
+
+message DeleteBucketInput {
+  string bucket = 1;
+  string expectedBucketOwner = 2;
+}
+
+message DeleteBucketOutput{
+  Metadata resultMetadata = 1;
+}
+
+message PutBucketAclInput {
+  string bucket = 1;
+  BucketCannedACL acl = 2;
+  AccessControlPolicy accessControlPolicy = 3;
+}
+
+message AccessControlPolicy{
+  repeated Grant grants = 1;
+  Owner owner = 2;
+}
+
+message PutBucketAclOutput{
+  Metadata resultMetadata = 3;
+}
+
+message PutBucketVersioningInput {
+  string bucket = 1;
+  string contentMD5 = 2;
+  string expectedBucketOwner = 3;
+  string mFA = 4;
+  VersioningConfiguration versioningConfiguration = 5;
+  ChecksumAlgorithm checksumAlgorithm = 6;
+}
+
+message PutBucketVersioningOutput{
+  Metadata resultMetadata = 1;
+}
+
+message VersioningConfiguration{
+  MFADelete mFADelete = 1;
+  BucketVersioningStatus status = 2;
+}
+
+message GetBucketVersioningInput {
+  string bucket = 1;
+  string expectedBucketOwner = 2;
+}
+
+message GetBucketVersioningOutput {
+  MFADeleteStatus mFADelete = 1;
+  BucketVersioningStatus status = 2;
+  Metadata resultMetadata = 3;
+}
+
+message PutBucketPolicyInput {
+  string bucket = 1;
+  string policy = 2;
+  ChecksumAlgorithm checksumAlgorithm = 3;
+  bool confirmRemoveSelfBucketAccess = 4;
+  string contentMD5 = 5;
+  string expectedBucketOwner = 6;
+}
+
+message PutBucketPolicyOutput{
+  Metadata resultMetadata = 1;
+}
+
+message GetBucketPolicyInput {
+  string bucket = 1;
+  string expectedBucketOwner = 2;
+}
+
+message GetBucketPolicyOutput {
+  string policy = 1;
+  Metadata resultMetadata = 2;
+}
+
+message DeleteBucketPolicyInput {
+  string bucket = 1;
+  string expectedBucketOwner = 2;
+}
+
+message DeleteBucketPolicyOutput{
+  Metadata resultMetadata = 1;
+}
+
+message PutBucketOwnershipControlsInput{
+  string bucket = 1;
+  OwnershipControls ownershipControls = 2;
+  string contentMD5 = 3;
+  string expectedBucketOwner = 4;
+}
+
+message OwnershipControls{
+  repeated OwnershipControlsRule rules = 1;
+}
+
+message OwnershipControlsRule{
+  ObjectOwnership objectOwnership = 1;
+}
+
+message PutBucketOwnershipControlsOutput{
+  Metadata resultMetadata = 1;
+}
+
+
+message GetBucketOwnershipControlsInput{
+  string bucket = 1;
+  string expectedBucketOwner = 2;
+}
+
+message GetBucketOwnershipControlsOutput{
+  OwnershipControls ownershipControls = 1;
+  Metadata resultMetadata = 2;
+}
+
+message DeleteBucketOwnershipControlsInput{
+  string bucket = 1;
+  string expectedBucketOwner = 2;
+}
+
+message DeleteBucketOwnershipControlsOutput{
+  Metadata resultMetadata = 1;
+}
+
+// Multipart Upload相关消息
+message CreateMultipartUploadInput {
+  string bucket = 1;
+  string key = 2;
+  ObjectCannedACL acl = 3;
+  bool bucketKeyEnabled = 4;
+  string cacheControl = 5;
+  ChecksumAlgorithm checksumAlgorithm = 6;
+  string contentDisposition = 7;
+  string contentEncoding = 8;
+  string contentLanguage = 9;
+  string contentType = 10;
+  string expectedBucketOwner = 11;
+  google.protobuf.Timestamp expires = 12;
+  string grantFullControl = 13;
+  string grantRead = 14;
+  string grantReadAcp = 15;
+  string grantWriteAcp = 16;
+  map<string, string> metadata = 17;
+  ObjectLockLegalHoldStatus objectLockLegalHoldStatus = 18;
+  ObjectLockMode objectLockMode = 19;
+  google.protobuf.Timestamp objectLockRetainUntilDate = 20;
+  RequestPayer requestPayer = 21;
+  string sseCustomerAlgorithm = 22;
+  string sseCustomerKey = 23;
+  string sseCustomerKeyMd5 = 24;
+  string sseKmsEncryptionContext = 25;
+  string sseKmsKeyId = 26;
+  ServerSideEncryption serverSideEncryption = 27;
+  StorageClass storageClass = 28;
+  string tagging = 29;
+  string websiteRedirectLocation = 30;
+}
+
+message CreateMultipartUploadOutput {
+  google.protobuf.Timestamp abortDate = 1;
+  string abortRuleId = 2;
+  string bucket = 3;
+  bool bucketKeyEnabled = 4;
+  ChecksumAlgorithm checksumAlgorithm = 5;
+  string key = 6;
+  RequestCharged requestCharged = 7;
+  string sseCustomerAlgorithm = 8;
+  string sseCustomerKeyMD5 = 9;
+  string sseKMSEncryptionContext = 10;
+  string sseKMSKeyId = 11;
+  ServerSideEncryption serverSideEncryption = 12;
+  string uploadId = 13;
+  Metadata resultMetadata = 14;
+}
+
+
+
+message CompleteMultipartUploadInput {
+  string bucket = 1;
+  string key = 2;
+  string uploadId = 3;
+  string checksumCRC32 = 4;
+  string checksumCRC32C = 5;
+  string checksumSHA1 = 6;
+  string checksumSHA256 = 7;
+  string expectedBucketOwner = 8;
+  CompletedMultipartUpload multipartUpload = 9;
+  RequestPayer requestPayer = 10;
+  string sseCustomerAlgorithm = 11;
+  string sseCustomerKey = 12;
+  string sseCustomerKeyMD5 = 13;
+}
+
+message CompletedMultipartUpload {
+  repeated CompletedPart parts = 1;
+}
+
+message CompletedPart {
+  string checksumCRC32 = 1;
+  string checksumCRC32C = 2;
+  string checksumSHA1 = 3;
+  string checksumSHA256 = 4;
+  string etag = 5;
+  int32 partNumber = 6;
+}
+
+message CompleteMultipartUploadOutput {
+  string bucket = 1;
+  bool bucketKeyEnabled = 2;
+  string checksumCRC32 = 3;
+  string checksumCRC32C = 4;
+  string checksumSHA1 = 5;
+  string checksumSHA256 = 6;
+  string etag = 7;
+  string expiration = 8;
+  string key = 9;
+  string location = 10;
+  RequestCharged requestCharged = 11;
+  string sseKmsKeyId = 12;
+  ServerSideEncryption serverSideEncryption = 13;
+  string versionId = 14;
+  Metadata resultMetadata = 15;
+}
+
+message AbortMultipartUploadInput {
+  string bucket = 1;
+  string key = 2;
+  string uploadId = 3;
+  string expectedBucketOwner = 4;
+  RequestPayer requestPayer = 5;
+}
+
+message AbortMultipartUploadOutput {
+  RequestCharged requestCharged = 1;
+  Metadata resultMetadata = 2;
+}
+
+
+message ListMultipartUploadsInput {
+  string bucket = 1;
+  string delimiter = 2;
+  EncodingType encodingType = 3;
+  string expectedBucketOwner = 4;
+  string keyMarker = 5;
+  int32 maxUploads = 6;
+  string prefix = 7;
+  RequestPayer requestPayer = 8;
+  string uploadIdMarker = 9;
+}
+
+
+message ListMultipartUploadsOutput {
+  string bucket = 1;
+  repeated CommonPrefix commonPrefixes = 2;
+  string delimiter = 3;
+  EncodingType encodingType = 4;
+  bool isTruncated = 5;
+  string keyMarker = 6;
+  int32 maxUploads = 7;
+  string nextKeyMarker = 8;
+  string nextUploadIdMarker = 9;
+  string prefix = 10;
+  RequestCharged requestCharged = 11;
+  string uploadIdMarker = 12;
+  repeated MultipartUpload uploads = 13;
+  Metadata resultMetadata = 14;
+}
+
+message CommonPrefix{
+  string prefix = 1;
+}
+
+message MultipartUpload {
+  ChecksumAlgorithm checksumAlgorithm = 1;
+  google.protobuf.Timestamp initiated = 2;
+  Initiator initiator = 3;
+  string key = 4;
+  Owner owner = 5;
+  StorageClass storageClass = 6;
+  string uploadId = 7;
+}
+
+message Initiator {
+  string displayName = 1;
+  string id = 2;
+}
+
+
+message ListPartsInput {
+  string bucket = 1;
+  string key = 2;
+  string uploadId = 3;
+  string expectedBucketOwner = 4;
+  int32 maxParts = 5;
+  string partNumberMarker = 6;
+  RequestPayer requestPayer = 7;
+  string sseCustomerAlgorithm = 8;
+  string sseCustomerKey = 9;
+  string sseCustomerKeyMD5 = 10;
+}
+
+message ListPartsOutput {
+  google.protobuf.Timestamp abortDate = 1;
+  string abortRuleId = 2;
+  string bucket = 3;
+  ChecksumAlgorithm checksumAlgorithm = 4;
+  Initiator initiator = 5;
+  bool isTruncated = 6;
+  string key = 7;
+  int32 maxParts = 8;
+  string nextPartNumberMarker = 9;
+  Owner owner = 10;
+  string partNumberMarker = 11;
+  repeated Part parts = 12;
+  RequestCharged requestCharged = 13;
+  StorageClass storageClass = 14;
+  string uploadId = 15;
+  repeated MetadataEntry resultMetadata = 16;
+}
+
+message Part {
+  string checksumCRC32 = 1;
+  string checksumCRC32C = 2;
+  string checksumSHA1 = 3;
+  string checksumSHA256 = 4;
+  string eTag = 5;
+  google.protobuf.Timestamp lastModified = 6;
+  int32 partNumber = 7;
+  int64 size = 8;
+}
+
+
+message UploadPartInput {
+  string bucket = 1;
+  string key = 2;
+  int32 partNumber = 3;
+  string uploadId = 4;
+  ChecksumAlgorithm checksumAlgorithm = 5;
+  string checksumCRC32 = 6;
+  string checksumCRC32C = 7;
+  string checksumSHA1 = 8;
+  string checksumSHA256 = 9;
+  int64 contentLength = 10;
+  string contentMD5 = 11;
+  string expectedBucketOwner = 12;
+  RequestPayer requestPayer = 13;
+  string sseCustomerAlgorithm = 14;
+  string sseCustomerKey = 15;
+  string sseCustomerKeyMD5 = 16;
+  repeated bytes body = 17;
+}
+
+message UploadPartOutput{
+  bool bucketKeyEnabled = 1;
+  string checksumCRC32 = 2;
+  string checksumCRC32C = 3;
+  string checksumSHA1 = 4;
+  string checksumSHA256 = 5;
+  string eTag = 6;
+  RequestCharged requestCharged = 7;
+  string sseCustomerAlgorithm = 8;
+  string sseCustomerKeyMD5 = 9;
+  string sseKMSKeyId = 10;
+  ServerSideEncryption serverSideEncryption = 11;
+  Metadata resultMetadata = 12;
+}
+
+message UploadPartCopyInput{
+  string bucket = 1;
+  string copySource = 2;
+  string key = 3;
+  int32 partNumber = 4;
+  string uploadId = 5;
+  string copySourceIfMatch = 6;
+  google.protobuf.Timestamp copySourceIfModifiedSince = 7;
+  string copySourceIfNoneMatch = 8;
+  google.protobuf.Timestamp copySourceIfUnmodifiedSince = 9;
+  string copySourceRange = 10;
+  string copySourceSSECustomerAlgorithm = 11;
+  string copySourceSSECustomerKey = 12;
+  string copySourceSSECustomerKeyMD5 = 13;
+  string expectedBucketOwner = 14;
+  string expectedSourceBucketOwner = 15;
+  RequestPayer requestPayer = 16;
+  string sseCustomerAlgorithm = 17;
+  string sseCustomerKey = 18;
+  string sseCustomerKeyMD5 = 19;
+}
+
+message PutObjectInput{
+  string bucket = 1;
+  string key = 2;
+  ObjectCannedACL acl = 3;
+  repeated bytes body = 4;
+  bool bucketKeyEnabled = 5;
+  string cacheControl = 6;
+  ChecksumAlgorithm checksumAlgorithm = 7;
+  string checksumCRC32 = 8;
+  string checksumCRC32C = 9;
+  string checksumSHA1 = 10;
+  string checksumSHA256 = 11;
+  string contentDisposition = 12;
+  string contentEncoding = 13;
+  string contentLanguage = 14;
+  int64 contentLength = 15;
+  string contentMD5 = 16;
+  string contentType = 17;
+  string expectedBucketOwner = 18;
+  google.protobuf.Timestamp expires = 19;
+  string grantFullControl = 20;
+  string grantRead = 21;
+  string grantReadACP = 22;
+  string grantWriteACP = 23;
+  Metadata resultMetadata = 24;
+  ObjectLockLegalHoldStatus objectLockLegalHoldStatus = 25;
+  ObjectLockMode objectLockMode = 26;
+  google.protobuf.Timestamp objectLockRetainUntilDate = 27;
+  RequestPayer requestPayer = 28;
+  string sseCustomerAlgorithm = 29;
+  string sseCustomerKey = 30;
+  string sseCustomerKeyMD5 = 31;
+  string sseKMSEncryptionContext = 32;
+  string sseKMSKeyId = 33;
+  ServerSideEncryption serverSideEncryption = 34;
+  StorageClass storageClass = 35;
+  string tagging = 36;
+  string websiteRedirectLocation = 37;
+}
+
+message PutObjectOutput{
+  bool bucketKeyEnabled = 1;
+  string checksumCRC32 = 2;
+  string checksumCRC32C = 3;
+  string checksumSHA1 = 4;
+  string checksumSHA256 = 5;
+  string eTag = 6;
+  string expiration = 7;
+  RequestCharged requestCharged = 8;
+  string sseCustomerAlgorithm = 9;
+  string sseCustomerKeyMD5 = 10;
+  string sseKMSEncryptionContext = 11;
+  string sseKMSKeyId = 12;
+  ServerSideEncryption serverSideEncryption = 13;
+  string versionId = 14;
+  Metadata resultMetadata = 15;
+}
+
+message HeadObjectInput{
+  string bucket = 1;
+  string key = 2;
+  ChecksumMode checksumMode = 3;
+  string expectedBucketOwner = 4;
+  string  ifMatch = 5;
+  google.protobuf.Timestamp ifModifiedSince = 6;
+  string ifNoneMatch = 7;
+  google.protobuf.Timestamp ifUnmodifiedSince = 8;
+  int32 partNumbe = 9;
+  string range = 10;
+  RequestPayer requestPayer = 11;
+  string responseCacheControl = 12;
+  string responseContentDisposition = 13;
+  string responseContentEncoding = 14;
+  string responseContentLanguage = 15;
+  string responseContentType = 16;
+  google.protobuf.Timestamp responseExpires = 17;
+  string sseCustomerAlgorithm = 18;
+  string sseCustomerKey = 19;
+  string sseCustomerKeyMD5 = 20;
+  string versionId = 21;
+}
+
+message GetObjectInput{
+  string bucket = 1;
+  string key = 2;
+  ChecksumMode checksumMode = 3;
+  string expectedBucketOwner = 4;
+  string  ifMatch = 5;
+  google.protobuf.Timestamp ifModifiedSince = 6;
+  string ifNoneMatch = 7;
+  google.protobuf.Timestamp ifUnmodifiedSince = 8;
+  int32 partNumbe = 9;
+  string range = 10;
+  RequestPayer requestPayer = 11;
+  string responseCacheControl = 12;
+  string responseContentDisposition = 13;
+  string responseContentEncoding = 14;
+  string responseContentLanguage = 15;
+  string responseContentType = 16;
+  google.protobuf.Timestamp responseExpires = 17;
+  string sseCustomerAlgorithm = 18;
+  string sseCustomerKey = 19;
+  string sseCustomerKeyMD5 = 20;
+  string versionId = 21;
+}
+
+message GetObjectOutput{
+  string acceptRanges = 1;
+  repeated bytes body = 2;
+  bool bucketKeyEnabled = 3;
+  string cacheControl = 4;
+  string checksumCRC32 = 5;
+  string checksumCRC32C = 6;
+  string checksumSHA1 = 7;
+  string checksumSHA256 = 8;
+  string contentDisposition = 9;
+  string contentEncoding = 10;
+  string contentLanguage = 11;
+  int64 contentLength = 12;
+  string contentRange = 13;
+  string contentType = 14;
+  bool deleteMarker = 15;
+  string eTag = 16;
+  string expiration = 17;
+  google.protobuf.Timestamp expires = 18;
+  string expiresString = 19;
+  google.protobuf.Timestamp lastModified = 20;
+  map<string, string> metadata = 21;
+  int32 missingMeta = 22;
+  ObjectLockLegalHoldStatus objectLockLegalHoldStatus = 23;
+  ObjectLockMode objectLockMode = 24;
+  google.protobuf.Timestamp objectLockRetainUntilDate = 25;
+  int32 partsCount = 26;
+  ReplicationStatus replicationStatus = 27;
+  RequestCharged requestCharged = 28;
+  string restore = 29;
+  string sseCustomerAlgorithm = 30;
+  string sseCustomerKeyMD5 = 31;
+  string sseKMSKeyId = 32;
+  ServerSideEncryption serverSideEncryption = 33;
+  StorageClass storageClass = 34;
+  int32 tagCount = 35;
+  string versionId = 36;
+  string websiteRedirectLocation = 37;
+  Metadata resultMetadata = 38;
+}
+
+message GetObjectAclInput{
+  string bucket = 1;
+  string key = 2;
+  string expectedBucketOwner = 3;
+  RequestPayer requestPayer = 4;
+  string versionId = 5;
+}
+
+message GetObjectAclOutput{
+  Grant grants = 1;
+  Owner owner = 2;
+  RequestCharged requestCharged = 3;
+  Metadata resultMetadata = 4;
+}
+
+message GetObjectAttributesInput{
+  string bucket = 1;
+  string key = 2;
+  ObjectAttributes objectAttributes = 3;
+  string expectedBucketOwner = 4;
+  int32 maxParts = 5;
+  string partNumberMarker = 6;
+  RequestPayer requestPayer = 7;
+  string sseCustomerAlgorithm = 8;
+  string sseCustomerKey = 9;
+  string sseCustomerKeyMD5 = 10;
+  string versionId = 11;
+}
+
+message Checksum{
+  string checksumCRC32 = 1;
+  string checksumCRC32C = 2;
+  string checksumSHA1 = 3;
+  string checksumSHA256 = 4;
+}
+
+message GetObjectAttributesOutput{
+  Checksum checksum = 1;
+  bool deleteMarker = 2;
+  string eTag = 3;
+  google.protobuf.Timestamp lastModified = 4;
+  GetObjectAttributesParts ObjectParts = 5;
+  int64 objectSize = 6;
+  RequestCharged requestCharged = 7;
+  StorageClass storageClass = 8;
+  string versionId = 9;
+  Metadata resultMetadata = 10;
+}
+
+message GetObjectAttributesParts{
+  bool isTruncated = 1;
+  int32 maxParts = 2;
+  string nextPartNumberMarker = 3;
+  string partNumberMarker = 4;
+  ObjectPart parts = 5;
+  int32 totalPartsCount = 6;
+}
+
+message ObjectPart{
+  string checksumCRC32 = 1;
+  string checksumCRC32C = 2;
+  string checksumSHA1 = 3;
+  string checksumSHA256 = 4;
+  int32 partNumber = 5;
+  int64 size = 6;
+}
+
+message CopyObjectInput{
+  string bucket = 1;
+  string copySource = 2;
+  string key = 3;
+  ObjectCannedACL acl = 4;
+  bool bucketKeyEnabled = 5;
+  string cacheControl = 6;
+  ChecksumAlgorithm checksumAlgorithm = 7;
+  string contentDisposition = 8;
+  string contentEncoding = 9;
+  string contentLanguage = 10;
+  string contentType = 11;
+  string copySourceIfMatch = 12;
+  google.protobuf.Timestamp copySourceIfModifiedSince = 13;
+  string copySourceIfNoneMatch = 14;
+  google.protobuf.Timestamp copySourceIfUnmodifiedSince = 15;
+  string copySourceSSECustomerAlgorithm = 16;
+  string copySourceSSECustomerKey = 17;
+  string copySourceSSECustomerKeyMD5 = 18;
+  string expectedBucketOwner = 19;
+  string expectedSourceBucketOwner = 20;
+  google.protobuf.Timestamp expires = 21;
+  string grantFullControl = 22;
+  string grantRead = 23;
+  string grantReadACP = 24;
+  string grantWriteACP = 25;
+  map<string, string> metadata = 26;
+  MetadataDirective metadataDirective = 27;
+  ObjectLockLegalHoldStatus objectLockLegalHoldStatus = 28;
+  ObjectLockMode objectLockMode = 29;
+  google.protobuf.Timestamp objectLockRetainUntilDate = 30;
+  RequestPayer requestPayer = 31;
+  string sseCustomerAlgorithm = 32;
+  string sseCustomerKey = 33;
+  string sseCustomerKeyMD5 = 34;
+  string sseKMSEncryptionContext = 35;
+  string sseKMSKeyId = 36;
+  ServerSideEncryption serverSideEncryption = 37;
+  StorageClass storageClass = 38;
+  string tagging = 39;
+  TaggingDirective taggingDirective = 40;
+  string websiteRedirectLocation = 41;
+}
+
+message CopyObjectOutput{
+  bool bucketKeyEnabled = 1;
+  CopyObjectResult copyObjectResult = 2;
+  string copySourceVersionId = 3;
+  string expiration = 4;
+  RequestCharged requestCharged = 5;
+  string sseCustomerAlgorithm = 6;
+  string sseCustomerKeyMD5 = 7;
+  string sseKMSEncryptionContext = 8;
+  string sseKMSKeyId = 9;
+  ServerSideEncryption serverSideEncryption = 10;
+  string versionId = 11;
+  Metadata resultMetadata = 12;
+}
+
+message CopyObjectResult{
+  string checksumCRC32 = 1;
+  string checksumCRC32C = 2;
+  string checksumSHA1 = 3;
+  string checksumSHA256 = 4;
+  string eTag = 5;
+  google.protobuf.Timestamp lastModified = 6;
+}
+
+message ListObjectsInput{
+  string bucket = 1;
+  string delimiter = 2;
+  EncodingType encodingType = 3;
+  string expectedBucketOwner = 4;
+  string marker = 5;
+  int32 maxKeys = 6;
+  repeated OptionalObjectAttributes optionalObjectAttributes = 7;
+  string prefix = 8;
+  RequestPayer requestPayer = 9;
+}
+
+message ListObjectsOutput{
+  CommonPrefix commonPrefixes = 1;
+  repeated  Object Contents = 2;
+  string delimiter = 3;
+  EncodingType encodingType = 4;
+  bool isTruncated = 5;
+  string marker = 6;
+  int32 maxKeys = 7;
+  string name = 8;
+  string nextMarker = 9;
+  string prefix = 10;
+  RequestCharged requestCharged = 11;
+  Metadata resultMetadata = 12;
+}
+
+message Object{
+  repeated ChecksumAlgorithm ChecksumAlgorithm = 1;
+  string eTag = 2;
+  string key = 3;
+  google.protobuf.Timestamp lastModified = 4;
+  Owner owner = 5;
+  RestoreStatus restoreStatus = 6;
+  int64 size = 7;
+  ObjectStorageClass objectStorageClass = 8;
+}
+
+message RestoreStatus{
+  bool isRestoreInProgress = 1;
+  google.protobuf.Timestamp restoreExpiryDate = 2;
+}
+
+message ListObjectsV2Input{
+  string bucket = 1;
+  string continuationToken = 2;
+  string delimiter = 3;
+  EncodingType encodingType = 4;
+  string expectedBucketOwner = 5;
+  bool fetchOwner = 6;
+  int32 maxKeys = 7;
+  repeated OptionalObjectAttributes optionalObjectAttributes = 8;
+  string prefix = 9;
+  RequestPayer requestPayer = 10;
+  string startAfter = 11;
+}
+
+message ListObjectsV2Output{
+  repeated CommonPrefix commonPrefixes = 1;
+  repeated Object contents = 2;
+  string continuationToken = 3;
+  string delimiter = 4;
+  EncodingType encodingType = 5;
+  bool isTruncated = 6;
+  int32 keyCount = 7;
+  int32 maxKeys = 8;
+  string name = 9;
+  string nextContinuationToken = 10;
+  string prefix = 11;
+  RequestCharged requestCharged = 12;
+  string startAfter = 13;
+  Metadata resultMetadata = 14;
+}
+
+message DeleteObjectInput{
+  string bucket = 1;
+  string key = 2;
+  bool bypassGovernanceRetention = 3;
+  string expectedBucketOwner = 4;
+  string mfa = 5;
+  RequestPayer RequestPayer = 6;
+  string versionId = 7;
+}
+
+message DeleteObjectOutput{
+  bool deleteMarker = 1;
+  RequestCharged requestCharged = 2;
+  string versionId = 3;
+  Metadata resultMetadata = 4;
+}
+
+message DeleteObjectsInput{
+  string bucket = 1;
+  Delete delete = 2;
+  bool bypassGovernanceRetention = 3;
+  ChecksumAlgorithm checksumAlgorithm = 4;
+  string expectedBucketOwner = 5;
+  string mfa = 6;
+  RequestPayer requestPayer = 7;
+}
+
+message Delete{
+  repeated ObjectIdentifier objects = 1;
+  bool quiet = 2;
+}
+
+message ObjectIdentifier{
+  string key = 1;
+  string versionId = 2;
+}
+
+message DeleteObjectsOutput{
+  repeated DeletedObject deleted = 1;
+  repeated Error errors = 2;
+  RequestCharged requestCharged = 3;
+  Metadata resultMetadata = 4;
+}
+
+message DeletedObject{
+  bool deleteMarker = 1;
+  string deleteMarkerVersionId = 2;
+  string key = 3;
+  string versionId = 4;
+}
+
+message Error{
+  string code = 1;
+  string key = 2;
+  string message = 3;
+  string versionId = 4;
+}
+
+message PutObjectAclInput{
+  string bucket = 1;
+  string key = 2;
+  ObjectCannedACL acl = 3;
+  AccessControlPolicy accessControlPolicy = 4;
+  ChecksumAlgorithm checksumAlgorithm = 5;
+  string contentMD5 = 6;
+  string expectedBucketOwner = 7;
+  string grantFullControl = 8;
+  string grantRead = 9;
+  string grantReadACP = 10;
+  string grantWrite = 11;
+  string grantWriteACP = 12;
+  RequestPayer requestPayer = 13;
+  string versionId = 14;
+}
+
+message PutObjectAclOutput{
+  RequestCharged RequestCharged = 1;
+  Metadata resultMetadata = 2;
+}
+
+message ListObjectVersionsInput{
+  string bucket = 1;
+  string delimiter = 2;
+  EncodingType encodingType = 3;
+  string expectedBucketOwner = 4;
+  string keyMarker = 5;
+  int32 maxKeys = 6;
+  repeated OptionalObjectAttributes optionalObjectAttributes = 7;
+  string prefix = 8;
+  RequestPayer requestPayer = 9;
+  string versionIdMarker = 10;
+}
+
+message ListObjectVersionsOutput{
+  repeated CommonPrefix commonPrefixes = 1;
+  repeated DeleteMarkerEntry deleteMarkers = 2;
+  string delimiter = 3;
+  EncodingType encodingType = 4;
+  bool isTruncated = 5;
+  string keyMarker = 6;
+  int32 maxKeys = 7;
+  string name = 8;
+  string nextKeyMarker = 9;
+  string nextVersionIdMarker = 10;
+  string prefix = 11;
+  RequestCharged requestCharged = 12;
+  string versionIdMarker = 13;
+  repeated ObjectVersion versions = 14;
+  Metadata resultMetadata = 15;
+}
+
+message DeleteMarkerEntry{
+  bool isLatest = 1;
+  string key = 2;
+  google.protobuf.Timestamp lastModified = 3;
+  Owner owner = 4;
+  string versionId = 5;
+}
+
+message ObjectVersion{
+  repeated ChecksumAlgorithm checksumAlgorithm = 1;
+  string eTag = 2;
+  bool isLatest = 3;
+  string key = 4;
+  google.protobuf.Timestamp lastModified = 5;
+  Owner owner = 6;
+  RestoreStatus restoreStatus = 7;
+  int64 size = 8;
+  ObjectVersionStorageClass storageClass = 9;
+  string versionId = 10;
+}
+
+message RestoreObjectInput{
+  string bucket = 1;
+  string key = 2;
+  ChecksumAlgorithm checksumAlgorithm = 3;
+  string expectedBucketOwner = 4;
+  RequestPayer requestPayer = 5;
+  RestoreRequest RestoreRequest = 6;
+  string versionId = 7;
+}
+
+message RestoreRequest{
+  int32 days = 1;
+  string description = 2;
+  GlacierJobParameters glacierJobParameters = 3;
+  OutputLocation outputLocation = 4;
+  SelectParameters selectParameters = 5;
+  Tier tier = 6;
+  RestoreRequestType type = 7;
+}
+
+message SelectParameters{
+  string expression = 1;
+  ExpressionType expressionType = 2;
+  InputSerialization inputSerialization = 3;
+  OutputSerialization outputSerialization = 4;
+}
+
+message InputSerialization{
+  CSVInput csv = 1;
+  CompressionType compressionType = 2;
+  JSONInput json = 3;
+  ParquetInput Parquet = 4;
+}
+
+message OutputSerialization{
+  CSVInput csv = 1;
+  JSONOutput json = 2;
+}
+
+message CSVInput{
+  bool allowQuotedRecordDelimiter = 1;
+  string comments = 2;
+  string fieldDelimiter = 3;
+  FileHeaderInfo fileHeaderInfo = 4;
+  string quoteCharacter = 5;
+  string quoteEscapeCharacter = 6;
+  string recordDelimiter = 7;
+}
+
+message JSONInput{
+  JSONType type = 1;
+}
+
+message JSONOutput{
+  string recordDelimiter = 1;
+}
+
+message ParquetInput{
+
+}
+
+message GlacierJobParameters{
+  Tier tier = 1;
+}
+
+message OutputLocation{
+  S3Location s3 = 1;
+}
+
+message S3Location{
+  string bucketName = 1;
+  string prefix = 2;
+  repeated Grant accessControlList = 3;
+  ObjectCannedACL cannedACL = 4;
+  Encryption encryption = 5;
+  StorageClass storageClass = 6;
+  Tagging tagging = 7;
+  repeated MetadataEntry userMetadata = 8;
+}
+
+message Encryption{
+  ServerSideEncryption encryptionType = 1;
+  string kmsContext = 2;
+  string kmsKeyId = 3;
+}
+
+message Tagging{
+  repeated Tag tagSet = 1;
+}
+
+message Tag{
+  string key = 1;
+  string value = 2;
+}
+
+message RestoreObjectOutput{
+  RequestCharged requestCharged = 1;
+  string restoreOutputPath = 2;
+  Metadata resultMetadata = 3;
+}
+
+message GetBucketTaggingInput{
+  string bucket = 1;
+  string expectedBucketOwner = 2;
+}
+
+message GetBucketTaggingOutput{
+  repeated Tag tagSet = 1;
+}
+
+message PutBucketTaggingInput{
+  string bucket = 1;
+  Tagging tagging = 2;
+  ChecksumAlgorithm checksumAlgorithm = 3;
+  string contentMD5 = 4;
+  string expectedBucketOwner = 5;
+}
+
+message PutBucketTaggingOutput{
+  Metadata resultMetadata = 1;
+}
+
+message DeleteBucketTaggingInput{
+  string bucket = 1;
+  string expectedBucketOwner = 2;
+}
+
+message DeleteBucketTaggingOutput{
+  Metadata resultMetadata = 1;
+}
+
+message GetObjectTaggingInput{
+  string bucket = 1;
+  string key = 2;
+  string expectedBucketOwner = 3;
+  RequestPayer requestPayer = 4;
+  string versionId = 5;
+}
+
+message GetObjectTaggingOutput{
+  repeated Tag tagSet = 1;
+  string versionId = 2;
+  Metadata resultMetadata = 3;
+}
+
+message PutObjectTaggingInput{
+  string bucket = 1;
+  string key = 2;
+  Tagging tagging = 3;
+  ChecksumAlgorithm checksumAlgorithm = 4;
+  string contentMD5 = 5;
+  string expectedBucketOwner = 6;
+  RequestPayer requestPayer = 7;
+  string versionId = 8;
+}
+
+message PutObjectTaggingOutput{
+  string versionId = 1;
+  Metadata resultMetadata = 2;
+}
+
+
+message DeleteObjectTaggingInput{
+  string bucket = 1;
+  string key = 2;
+  string expectedBucketOwner = 3;
+  string versionId = 4;
+}
+
+message DeleteObjectTaggingOutput{
+  string versionId = 1;
+  Metadata resultMetadata = 2;
+}
+
+message PutObjectLockConfigurationInput{
+  string bucket = 1;
+  ChecksumAlgorithm checksumAlgorithm = 2;
+  string contentMD5 = 3;
+  string expectedBucketOwner = 4;
+  ObjectLockConfiguration objectLockConfiguration = 5;
+  RequestPayer requestPayer = 6;
+  string token = 7;
+}
+
+message ObjectLockConfiguration{
+  ObjectLockEnabled objectLockEnabled = 1;
+  ObjectLockRule rule = 2;
+}
+
+message ObjectLockRule{
+  DefaultRetention DefaultRetention = 1;
+}
+
+message DefaultRetention{
+  int32 days = 1;
+  ObjectLockRetentionMode mode = 2;
+  int32 years = 3;
+}
+
+message PutObjectLockConfigurationOutput{
+  RequestCharged requestCharged = 1;
+  Metadata resultMetadata = 2;
+}
+
+message GetObjectLockConfigurationInput{
+  string bucket = 1;
+  string expectedBucketOwner = 2;
+}
+
+message GetObjectLockConfigurationOutput{
+  ObjectLockConfiguration objectLockConfiguration = 1;
+  Metadata resultMetadata = 2;
+}
+
+message PutObjectRetentionInput{
+  string bucket = 1;
+  string key = 2;
+  bool bypassGovernanceRetention = 3;
+  ChecksumAlgorithm checksumAlgorithm = 4;
+  string contentMD5 = 5;
+  string expectedBucketOwner = 6;
+  RequestPayer requestPayer = 7;
+  ObjectLockRetention retention = 8;
+  string versionId = 9;
+}
+
+message ObjectLockRetention{
+  ObjectLockRetentionMode mode = 1;
+  google.protobuf.Timestamp retainUntilDate = 2;
+}
+
+message PutObjectRetentionOutput{
+  RequestCharged requestCharged = 1;
+  Metadata resultMetadata = 2;
+}
+
+message GetObjectRetentionInput{
+  string bucket = 1;
+  string key = 2;
+  string expectedBucketOwner = 3;
+  RequestPayer requestPayer = 4;
+  string versionId = 5;
+}
+
+message GetObjectRetentionOutput{
+  ObjectLockRetention retention = 1;
+  Metadata resultMetadata = 2;
+}
+
+message PutObjectLegalHoldInput{
+  string bucket = 1;
+  string key = 2;
+  ChecksumAlgorithm checksumAlgorithm = 3;
+  string contentMD5 = 4;
+  string expectedBucketOwner = 5;
+  ObjectLockLegalHold legalHold = 6;
+  RequestPayer requestPayer = 7;
+}
+
+message ObjectLockLegalHold{
+  ObjectLockLegalHoldStatus status = 1;
+}
+
+message PutObjectLegalHoldOutput{
+  RequestCharged requestCharged = 1;
+  Metadata resultMetadata = 2;
+}
+
+message GetObjectLegalHoldInput{
+  string bucket = 1;
+  string key = 2;
+  string expectedBucketOwner = 3;
+  RequestPayer requestPayer = 4;
+  string versionId = 5;
+}
+
+message GetObjectLegalHoldOutput{
+  ObjectLockLegalHold legalHold = 1;
+  Metadata resultMetadata = 2;
+}
+
+message ChangeBucketOwnerInput{
+  string bucket = 1;
+  bytes acl = 2;
+}
+
+message ChangeBucketOwnerOutput{
+
+}
+
+message ListBucketsAndOwnersOutput{
+  repeated BucketsAndOwners bucketsAndOwners = 1;
+}
+
+message BucketsAndOwners{
+  string name = 1;
+  string owner = 2;
+}
+
+
+// 枚举类型表示分析导出文件格式
+enum AnalyticsS3ExportFileFormat {
+  // 默认值
+  ANALYTICS_S3_EXPORT_FILE_FORMAT_UNDEFINED = 0;
+
+  // CSV ("CSV")
+  ANALYTICS_S3_EXPORT_FILE_FORMAT_CSV = 1;
+}
+
+// 枚举类型表示存档状态
+enum ArchiveStatus {
+  // 默认值
+  ARCHIVE_STATUS_UNDEFINED = 0;
+
+  // 存档访问 ("ARCHIVE_ACCESS")
+  ARCHIVE_STATUS_ARCHIVE_ACCESS = 1;
+
+  // 深度存档访问 ("DEEP_ARCHIVE_ACCESS")
+  ARCHIVE_STATUS_DEEP_ARCHIVE_ACCESS = 2;
+}
+
+// 枚举类型表示存储桶加速状态
+enum BucketAccelerateStatus {
+  // 默认值
+  BUCKET_ACCELERATE_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  BUCKET_ACCELERATE_STATUS_ENABLED = 1;
+
+  // 暂停 ("Suspended")
+  BUCKET_ACCELERATE_STATUS_SUSPENDED = 2;
+}
+
+// 枚举类型表示存储桶预定义访问控制列表（ACL）
+enum BucketCannedACL {
+  // 默认值
+  BUCKET_CANNED_ACL_UNDEFINED = 0;
+
+  // 私有 ("private")
+  BUCKET_CANNED_ACL_PRIVATE = 1;
+
+  // 公开读取 ("public-read")
+  BUCKET_CANNED_ACL_PUBLIC_READ = 2;
+
+  // 公开读取写入 ("public-read-write")
+  BUCKET_CANNED_ACL_PUBLIC_READ_WRITE = 3;
+
+  // 认证用户读取 ("authenticated-read")
+  BUCKET_CANNED_ACL_AUTHENTICATED_READ = 4;
+}
+
+// 枚举类型表示存储桶日志权限
+enum BucketLogsPermission {
+  // 默认值
+  BUCKET_LOGS_PERMISSION_UNDEFINED = 0;
+
+  // 完全控制 ("FULL_CONTROL")
+  BUCKET_LOGS_PERMISSION_FULL_CONTROL = 1;
+
+  // 读取 ("READ")
+  BUCKET_LOGS_PERMISSION_READ = 2;
+
+  // 写入 ("WRITE")
+  BUCKET_LOGS_PERMISSION_WRITE = 3;
+}
+
+// 枚举类型表示存储桶类型
+enum BucketType {
+  // 默认值
+  BUCKET_TYPE_UNDEFINED = 0;
+
+  // 目录 ("Directory")
+  BUCKET_TYPE_DIRECTORY = 1;
+}
+
+// 枚举类型表示存储桶版本控制状态
+enum BucketVersioningStatus {
+  // 默认值
+  BUCKET_VERSIONING_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  BUCKET_VERSIONING_STATUS_ENABLED = 1;
+
+  // 暂停 ("Suspended")
+  BUCKET_VERSIONING_STATUS_SUSPENDED = 2;
+}
+
+// 枚举类型表示校验和算法
+enum ChecksumAlgorithm {
+  // 默认值
+  CHECKSUM_ALGORITHM_UNDEFINED = 0;
+
+  // CRC32 ("CRC32")
+  CHECKSUM_ALGORITHM_CRC32 = 1;
+
+  // CRC32C ("CRC32C")
+  CHECKSUM_ALGORITHM_CRC32C = 2;
+
+  // SHA1 ("SHA1")
+  CHECKSUM_ALGORITHM_SHA1 = 3;
+
+  // SHA256 ("SHA256")
+  CHECKSUM_ALGORITHM_SHA256 = 4;
+}
+
+// 枚举类型表示校验和模式
+enum ChecksumMode {
+  // 默认值
+  CHECKSUM_MODE_UNDEFINED = 0;
+
+  // 启用 ("ENABLED")
+  CHECKSUM_MODE_ENABLED = 1;
+}
+
+// 枚举类型表示压缩类型
+enum CompressionType {
+  // 默认值
+  COMPRESSION_TYPE_UNDEFINED = 0;
+
+  // 无 ("NONE")
+  COMPRESSION_TYPE_NONE = 1;
+
+  // Gzip ("GZIP")
+  COMPRESSION_TYPE_GZIP = 2;
+
+  // Bzip2 ("BZIP2")
+  COMPRESSION_TYPE_BZIP2 = 3;
+}
+
+// 枚举类型表示数据冗余
+enum DataRedundancy {
+  // 默认值
+  DATA_REDUNDANCY_UNDEFINED = 0;
+
+  // 单一可用区 ("SingleAvailabilityZone")
+  DATA_REDUNDANCY_SINGLE_AVAILABILITY_ZONE = 1;
+}
+
+// 枚举类型表示删除标记复制状态
+enum DeleteMarkerReplicationStatus {
+  // 默认值
+  DELETE_MARKER_REPLICATION_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  DELETE_MARKER_REPLICATION_STATUS_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  DELETE_MARKER_REPLICATION_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示编码类型
+enum EncodingType {
+  // 默认值
+  ENCODING_TYPE_UNDEFINED = 0;
+
+  // URL ("url")
+  ENCODING_TYPE_URL = 1;
+}
+
+// 枚举类型表示事件类型
+enum Event {
+  // 默认值
+  EVENT_UNDEFINED = 0;
+
+  // S3 减少冗余丢失对象 ("s3:ReducedRedundancyLostObject")
+  EVENT_S3_REDUCED_REDUNDANCY_LOST_OBJECT = 1;
+
+  // S3 对象创建 ("s3:ObjectCreated:*")
+  EVENT_S3_OBJECT_CREATED = 2;
+
+  // S3 对象创建 - Put ("s3:ObjectCreated:Put")
+  EVENT_S3_OBJECT_CREATED_PUT = 3;
+
+  // S3 对象创建 - Post ("s3:ObjectCreated:Post")
+  EVENT_S3_OBJECT_CREATED_POST = 4;
+
+  // S3 对象创建 - Copy ("s3:ObjectCreated:Copy")
+  EVENT_S3_OBJECT_CREATED_COPY = 5;
+
+  // S3 对象创建 - 完成分片上传 ("s3:ObjectCreated:CompleteMultipartUpload")
+  EVENT_S3_OBJECT_CREATED_COMPLETE_MULTIPART_UPLOAD = 6;
+
+  // S3 对象移除 ("s3:ObjectRemoved:*")
+  EVENT_S3_OBJECT_REMOVED = 7;
+
+  // S3 对象移除 - 删除 ("s3:ObjectRemoved:Delete")
+  EVENT_S3_OBJECT_REMOVED_DELETE = 8;
+
+  // S3 对象移除 - 创建删除标记 ("s3:ObjectRemoved:DeleteMarkerCreated")
+  EVENT_S3_OBJECT_REMOVED_DELETE_MARKER_CREATED = 9;
+
+  // S3 对象恢复 ("s3:ObjectRestore:*")
+  EVENT_S3_OBJECT_RESTORE = 10;
+
+  // S3 对象恢复 - Post ("s3:ObjectRestore:Post")
+  EVENT_S3_OBJECT_RESTORE_POST = 11;
+
+  // S3 对象恢复 - 完成 ("s3:ObjectRestore:Completed")
+  EVENT_S3_OBJECT_RESTORE_COMPLETED = 12;
+
+  // S3 复制 ("s3:Replication:*")
+  EVENT_S3_REPLICATION = 13;
+
+  // S3 复制操作失败 ("s3:Replication:OperationFailedReplication")
+  EVENT_S3_REPLICATION_OPERATION_FAILED_REPLICATION = 14;
+
+  // S3 复制操作未跟踪 ("s3:Replication:OperationNotTracked")
+  EVENT_S3_REPLICATION_OPERATION_NOT_TRACKED = 15;
+
+  // S3 复制操作错过阈值 ("s3:Replication:OperationMissedThreshold")
+  EVENT_S3_REPLICATION_OPERATION_MISSED_THRESHOLD = 16;
+
+  // S3 复制操作在阈值后复制 ("s3:Replication:OperationReplicatedAfterThreshold")
+  EVENT_S3_REPLICATION_OPERATION_REPLICATED_AFTER_THRESHOLD = 17;
+
+  // S3 对象恢复 - 删除 ("s3:ObjectRestore:Delete")
+  EVENT_S3_OBJECT_RESTORE_DELETE = 18;
+
+  // S3 生命周期转换 ("s3:LifecycleTransition")
+  EVENT_S3_LIFECYCLE_TRANSITION = 19;
+
+  // S3 智能分层 ("s3:IntelligentTiering")
+  EVENT_S3_INTELLIGENT_TIERING = 20;
+
+  // S3 对象 ACL 设置 ("s3:ObjectAcl:Put")
+  EVENT_S3_OBJECT_ACL_PUT = 21;
+
+  // S3 生命周期到期 ("s3:LifecycleExpiration:*")
+  EVENT_S3_LIFECYCLE_EXPIRATION = 22;
+
+  // S3 生命周期到期 - 删除 ("s3:LifecycleExpiration:Delete")
+  EVENT_S3_LIFECYCLE_EXPIRATION_DELETE = 23;
+
+  // S3 生命周期到期 - 创建删除标记 ("s3:LifecycleExpiration:DeleteMarkerCreated")
+  EVENT_S3_LIFECYCLE_EXPIRATION_DELETE_MARKER_CREATED = 24;
+
+  // S3 对象标签 ("s3:ObjectTagging:*")
+  EVENT_S3_OBJECT_TAGGING = 25;
+
+  // S3 对象标签 - Put ("s3:ObjectTagging:Put")
+  EVENT_S3_OBJECT_TAGGING_PUT = 26;
+
+  // S3 对象标签 - 删除 ("s3:ObjectTagging:Delete")
+  EVENT_S3_OBJECT_TAGGING_DELETE = 27;
+}
+
+
+
+
+// 枚举类型表示现有对象的复制状态
+enum ExistingObjectReplicationStatus {
+  // 默认值
+  EXISTING_OBJECT_REPLICATION_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  EXISTING_OBJECT_REPLICATION_STATUS_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  EXISTING_OBJECT_REPLICATION_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示到期状态
+enum ExpirationStatus {
+  // 默认值
+  EXPIRATION_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  EXPIRATION_STATUS_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  EXPIRATION_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示表达式的类型
+enum ExpressionType {
+  // 默认值
+  EXPRESSION_TYPE_UNDEFINED = 0;
+
+  // SQL 表达式 ("SQL")
+  EXPRESSION_TYPE_SQL = 1;
+}
+
+// 枚举类型表示文件头信息处理方式
+enum FileHeaderInfo {
+  // 默认值
+  FILE_HEADER_INFO_UNDEFINED = 0;
+
+  // 使用文件头 ("USE")
+  FILE_HEADER_INFO_USE = 1;
+
+  // 忽略文件头 ("IGNORE")
+  FILE_HEADER_INFO_IGNORE = 2;
+
+  // 无文件头 ("NONE")
+  FILE_HEADER_INFO_NONE = 3;
+}
+
+// 枚举类型表示过滤规则的名称
+enum FilterRuleName {
+  // 默认值
+  FILTER_RULE_NAME_UNDEFINED = 0;
+
+  // 前缀 ("prefix")
+  FILTER_RULE_NAME_PREFIX = 1;
+
+  // 后缀 ("suffix")
+  FILTER_RULE_NAME_SUFFIX = 2;
+}
+
+// 枚举类型表示智能分层访问层
+enum IntelligentTieringAccessTier {
+  // 默认值
+  INTELLIGENT_TIERING_ACCESS_TIER_UNDEFINED = 0;
+
+  // ARCHIVE_ACCESS 存档访问层
+  INTELLIGENT_TIERING_ACCESS_TIER_ARCHIVE_ACCESS = 1;
+
+  // DEEP_ARCHIVE_ACCESS 深度存档访问层
+  INTELLIGENT_TIERING_ACCESS_TIER_DEEP_ARCHIVE_ACCESS = 2;
+}
+
+// 枚举类型表示智能分层状态
+enum IntelligentTieringStatus {
+  // 默认值
+  INTELLIGENT_TIERING_STATUS_UNDEFINED = 0;
+
+  // Enabled 启用状态
+  INTELLIGENT_TIERING_STATUS_ENABLED = 1;
+
+  // Disabled 禁用状态
+  INTELLIGENT_TIERING_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示库存格式
+enum InventoryFormat {
+  // 默认值
+  INVENTORY_FORMAT_UNDEFINED = 0;
+
+  // CSV 格式
+  INVENTORY_FORMAT_CSV = 1;
+
+  // ORC 格式
+  INVENTORY_FORMAT_ORC = 2;
+
+  // Parquet 格式
+  INVENTORY_FORMAT_PARQUET = 3;
+}
+
+// 枚举类型表示库存频率
+enum InventoryFrequency {
+  // 默认值
+  INVENTORY_FREQUENCY_UNDEFINED = 0;
+
+  // 每日 ("Daily")
+  INVENTORY_FREQUENCY_DAILY = 1;
+
+  // 每周 ("Weekly")
+  INVENTORY_FREQUENCY_WEEKLY = 2;
+}
+
+// 枚举类型表示库存包含的对象版本
+enum InventoryIncludedObjectVersions {
+  // 默认值
+  INVENTORY_INCLUDED_OBJECT_VERSIONS_UNDEFINED = 0;
+
+  // 包含所有版本 ("All")
+  INVENTORY_INCLUDED_OBJECT_VERSIONS_ALL = 1;
+
+  // 仅包含当前版本 ("Current")
+  INVENTORY_INCLUDED_OBJECT_VERSIONS_CURRENT = 2;
+}
+
+// 枚举类型表示库存的可选字段
+enum InventoryOptionalField {
+  // 默认值
+  INVENTORY_OPTIONAL_FIELD_UNDEFINED = 0;
+
+  // 文件大小 ("Size")
+  INVENTORY_OPTIONAL_FIELD_SIZE = 1;
+
+  // 最后修改日期 ("LastModifiedDate")
+  INVENTORY_OPTIONAL_FIELD_LAST_MODIFIED_DATE = 2;
+
+  // 存储类 ("StorageClass")
+  INVENTORY_OPTIONAL_FIELD_STORAGE_CLASS = 3;
+
+  // ETag ("ETag")
+  INVENTORY_OPTIONAL_FIELD_ETAG = 4;
+
+  // 是否为分片上传 ("IsMultipartUploaded")
+  INVENTORY_OPTIONAL_FIELD_IS_MULTIPART_UPLOADED = 5;
+
+  // 复制状态 ("ReplicationStatus")
+  INVENTORY_OPTIONAL_FIELD_REPLICATION_STATUS = 6;
+
+  // 加密状态 ("EncryptionStatus")
+  INVENTORY_OPTIONAL_FIELD_ENCRYPTION_STATUS = 7;
+
+  // 对象锁定保留日期 ("ObjectLockRetainUntilDate")
+  INVENTORY_OPTIONAL_FIELD_OBJECT_LOCK_RETAIN_UNTIL_DATE = 8;
+
+  // 对象锁定模式 ("ObjectLockMode")
+  INVENTORY_OPTIONAL_FIELD_OBJECT_LOCK_MODE = 9;
+
+  // 对象锁定法律保留状态 ("ObjectLockLegalHoldStatus")
+  INVENTORY_OPTIONAL_FIELD_OBJECT_LOCK_LEGAL_HOLD_STATUS = 10;
+
+  // 智能分层访问层 ("IntelligentTieringAccessTier")
+  INVENTORY_OPTIONAL_FIELD_INTELLIGENT_TIERING_ACCESS_TIER = 11;
+
+  // 桶密钥状态 ("BucketKeyStatus")
+  INVENTORY_OPTIONAL_FIELD_BUCKET_KEY_STATUS = 12;
+
+  // 校验和算法 ("ChecksumAlgorithm")
+  INVENTORY_OPTIONAL_FIELD_CHECKSUM_ALGORITHM = 13;
+
+  // 对象访问控制列表 ("ObjectAccessControlList")
+  INVENTORY_OPTIONAL_FIELD_OBJECT_ACCESS_CONTROL_LIST = 14;
+
+  // 对象所有者 ("ObjectOwner")
+  INVENTORY_OPTIONAL_FIELD_OBJECT_OWNER = 15;
+}
+
+// 枚举类型表示 JSON 类型
+enum JSONType {
+  // 默认值
+  JSON_TYPE_UNDEFINED = 0;
+
+  // DOCUMENT 类型 ("DOCUMENT")
+  JSON_TYPE_DOCUMENT = 1;
+
+  // LINES 类型 ("LINES")
+  JSON_TYPE_LINES = 2;
+}
+
+// 枚举类型表示位置类型
+enum LocationType {
+  // 默认值
+  LOCATION_TYPE_UNDEFINED = 0;
+
+  // 可用区 ("AvailabilityZone")
+  LOCATION_TYPE_AVAILABILITY_ZONE = 1;
+}
+
+// 枚举类型表示元数据指令
+enum MetadataDirective {
+  // 默认值
+  METADATA_DIRECTIVE_UNDEFINED = 0;
+
+  // 复制 ("COPY")
+  METADATA_DIRECTIVE_COPY = 1;
+
+  // 替换 ("REPLACE")
+  METADATA_DIRECTIVE_REPLACE = 2;
+}
+
+// 枚举类型表示指标状态
+enum MetricsStatus {
+  // 默认值
+  METRICS_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  METRICS_STATUS_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  METRICS_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示 MFA 删除状态
+enum MFADelete {
+  // 默认值
+  MFA_DELETE_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  MFA_DELETE_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  MFA_DELETE_DISABLED = 2;
+}
+
+// 枚举类型表示 MFA 删除状态
+enum MFADeleteStatus {
+  // 默认值
+  MFA_DELETE_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  MFA_DELETE_STATUS_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  MFA_DELETE_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示对象属性
+enum ObjectAttributes {
+  // 默认值
+  OBJECT_ATTRIBUTES_UNDEFINED = 0;
+
+  // ETag ("ETag")
+  OBJECT_ATTRIBUTES_ETAG = 1;
+
+  // 校验和 ("Checksum")
+  OBJECT_ATTRIBUTES_CHECKSUM = 2;
+
+  // 对象部件 ("ObjectParts")
+  OBJECT_ATTRIBUTES_OBJECT_PARTS = 3;
+
+  // 存储类 ("StorageClass")
+  OBJECT_ATTRIBUTES_STORAGE_CLASS = 4;
+
+  // 对象大小 ("ObjectSize")
+  OBJECT_ATTRIBUTES_OBJECT_SIZE = 5;
+}
+
+// 枚举类型表示对象预定义访问控制列表 (Canned ACL)
+enum ObjectCannedACL {
+  // 默认值
+  OBJECT_CANNED_ACL_UNDEFINED = 0;
+
+  // 私有 ("private")
+  OBJECT_CANNED_ACL_PRIVATE = 1;
+
+  // 公开读取 ("public-read")
+  OBJECT_CANNED_ACL_PUBLIC_READ = 2;
+
+  // 公开读取和写入 ("public-read-write")
+  OBJECT_CANNED_ACL_PUBLIC_READ_WRITE = 3;
+
+  // 认证用户读取 ("authenticated-read")
+  OBJECT_CANNED_ACL_AUTHENTICATED_READ = 4;
+
+  // AWS 执行读取 ("aws-exec-read")
+  OBJECT_CANNED_ACL_AWS_EXEC_READ = 5;
+
+  // 桶所有者读取 ("bucket-owner-read")
+  OBJECT_CANNED_ACL_BUCKET_OWNER_READ = 6;
+
+  // 桶所有者完全控制 ("bucket-owner-full-control")
+  OBJECT_CANNED_ACL_BUCKET_OWNER_FULL_CONTROL = 7;
+}
+
+// 枚举类型表示对象锁定启用状态
+enum ObjectLockEnabled {
+  // 默认值
+  OBJECT_LOCK_ENABLED_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  OBJECT_LOCK_ENABLED_ENABLED = 1;
+}
+
+// 枚举类型表示对象锁定法律保留状态
+enum ObjectLockLegalHoldStatus {
+  // 默认值
+  OBJECT_LOCK_LEGAL_HOLD_STATUS_UNDEFINED = 0;
+
+  // 启用 ("ON")
+  OBJECT_LOCK_LEGAL_HOLD_STATUS_ON = 1;
+
+  // 禁用 ("OFF")
+  OBJECT_LOCK_LEGAL_HOLD_STATUS_OFF = 2;
+}
+
+// 枚举类型表示对象锁定模式
+enum ObjectLockMode {
+  // 默认值
+  OBJECT_LOCK_MODE_UNDEFINED = 0;
+
+  // 治理 ("GOVERNANCE")
+  OBJECT_LOCK_MODE_GOVERNANCE = 1;
+
+  // 合规 ("COMPLIANCE")
+  OBJECT_LOCK_MODE_COMPLIANCE = 2;
+}
+
+// 枚举类型表示对象锁定保留模式
+enum ObjectLockRetentionMode {
+  // 默认值
+  OBJECT_LOCK_RETENTION_MODE_UNDEFINED = 0;
+
+  // 治理 ("GOVERNANCE")
+  OBJECT_LOCK_RETENTION_MODE_GOVERNANCE = 1;
+
+  // 合规 ("COMPLIANCE")
+  OBJECT_LOCK_RETENTION_MODE_COMPLIANCE = 2;
+}
+
+// 枚举类型表示对象所有权
+enum ObjectOwnership {
+  // 默认值
+  OBJECT_OWNERSHIP_UNDEFINED = 0;
+
+  // 桶所有者优先 ("BucketOwnerPreferred")
+  OBJECT_OWNERSHIP_BUCKET_OWNER_PREFERRED = 1;
+
+  // 对象写入者 ("ObjectWriter")
+  OBJECT_OWNERSHIP_OBJECT_WRITER = 2;
+
+  // 桶所有者强制 ("BucketOwnerEnforced")
+  OBJECT_OWNERSHIP_BUCKET_OWNER_ENFORCED = 3;
+}
+
+// 枚举类型表示对象存储类
+enum ObjectStorageClass {
+  // 默认值
+  OBJECT_STORAGE_CLASS_UNDEFINED = 0;
+
+  // 标准 ("STANDARD")
+  OBJECT_STORAGE_CLASS_STANDARD = 1;
+
+  // 减少冗余 ("REDUCED_REDUNDANCY")
+  OBJECT_STORAGE_CLASS_REDUCED_REDUNDANCY = 2;
+
+  // 冰川 ("GLACIER")
+  OBJECT_STORAGE_CLASS_GLACIER = 3;
+
+  // 标准 IA ("STANDARD_IA")
+  OBJECT_STORAGE_CLASS_STANDARD_IA = 4;
+
+  // 单区 IA ("ONEZONE_IA")
+  OBJECT_STORAGE_CLASS_ONEZONE_IA = 5;
+
+  // 智能分层 ("INTELLIGENT_TIERING")
+  OBJECT_STORAGE_CLASS_INTELLIGENT_TIERING = 6;
+
+  // 深度归档 ("DEEP_ARCHIVE")
+  OBJECT_STORAGE_CLASS_DEEP_ARCHIVE = 7;
+
+  // 外部存储 ("OUTPOSTS")
+  OBJECT_STORAGE_CLASS_OUTPOSTS = 8;
+
+  // 冰川 IR ("GLACIER_IR")
+  OBJECT_STORAGE_CLASS_GLACIER_IR = 9;
+
+  // 雪 ("SNOW")
+  OBJECT_STORAGE_CLASS_SNOW = 10;
+
+  // 快速单区 ("EXPRESS_ONEZONE")
+  OBJECT_STORAGE_CLASS_EXPRESS_ONEZONE = 11;
+}
+
+// 枚举类型表示对象版本存储类
+enum ObjectVersionStorageClass {
+  // 默认值
+  OBJECT_VERSION_STORAGE_CLASS_UNDEFINED = 0;
+
+  // 标准 ("STANDARD")
+  OBJECT_VERSION_STORAGE_CLASS_STANDARD = 1;
+}
+
+// 枚举类型表示可选对象属性
+enum OptionalObjectAttributes {
+  // 默认值
+  OPTIONAL_OBJECT_ATTRIBUTES_UNDEFINED = 0;
+
+  // 恢复状态 ("RestoreStatus")
+  OPTIONAL_OBJECT_ATTRIBUTES_RESTORE_STATUS = 1;
+}
+
+// 枚举类型表示所有者覆盖
+enum OwnerOverride {
+  // 默认值
+  OWNER_OVERRIDE_UNDEFINED = 0;
+
+  // 目标 ("Destination")
+  OWNER_OVERRIDE_DESTINATION = 1;
+}
+
+// 枚举类型表示分区日期来源
+enum PartitionDateSource {
+  // 默认值
+  PARTITION_DATE_SOURCE_UNDEFINED = 0;
+
+  // 事件时间 ("EventTime")
+  PARTITION_DATE_SOURCE_EVENT_TIME = 1;
+
+  // 交付时间 ("DeliveryTime")
+  PARTITION_DATE_SOURCE_DELIVERY_TIME = 2;
+}
+
+// 枚举类型表示付款方
+enum Payer {
+  // 默认值
+  PAYER_UNDEFINED = 0;
+
+  // 请求者 ("Requester")
+  PAYER_REQUESTER = 1;
+
+  // 桶所有者 ("BucketOwner")
+  PAYER_BUCKET_OWNER = 2;
+}
+
+// 枚举类型表示权限
+enum Permission {
+  // 默认值
+  PERMISSION_UNDEFINED = 0;
+
+  // 完全控制 ("FULL_CONTROL")
+  PERMISSION_FULL_CONTROL = 1;
+
+  // 写入 ("WRITE")
+  PERMISSION_WRITE = 2;
+
+  // 写入 ACL ("WRITE_ACP")
+  PERMISSION_WRITE_ACP = 3;
+
+  // 读取 ("READ")
+  PERMISSION_READ = 4;
+
+  // 读取 ACL ("READ_ACP")
+  PERMISSION_READ_ACP = 5;
+}
+
+// 枚举类型表示协议
+enum Protocol {
+  // 默认值
+  PROTOCOL_UNDEFINED = 0;
+
+  // HTTP ("http")
+  PROTOCOL_HTTP = 1;
+
+  // HTTPS ("https")
+  PROTOCOL_HTTPS = 2;
+}
+
+// 枚举类型表示引用字段
+enum QuoteFields {
+  // 默认值
+  QUOTE_FIELDS_UNDEFINED = 0;
+
+  // 始终 ("ALWAYS")
+  QUOTE_FIELDS_ALWAYS = 1;
+
+  // 根据需要 ("ASNEEDED")
+  QUOTE_FIELDS_ASNEEDED = 2;
+}
+
+// 枚举类型表示副本修改状态
+enum ReplicaModificationsStatus {
+  // 默认值
+  REPLICA_MODIFICATIONS_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  REPLICA_MODIFICATIONS_STATUS_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  REPLICA_MODIFICATIONS_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示复制规则状态
+enum ReplicationRuleStatus {
+  // 默认值
+  REPLICATION_RULE_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  REPLICATION_RULE_STATUS_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  REPLICATION_RULE_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示复制状态
+enum ReplicationStatus {
+  // 默认值
+  REPLICATION_STATUS_UNDEFINED = 0;
+
+  // 完成 ("COMPLETE")
+  REPLICATION_STATUS_COMPLETE = 1;
+
+  // 待处理 ("PENDING")
+  REPLICATION_STATUS_PENDING = 2;
+
+  // 失败 ("FAILED")
+  REPLICATION_STATUS_FAILED = 3;
+
+  // 副本 ("REPLICA")
+  REPLICATION_STATUS_REPLICA = 4;
+
+  // 已完成 ("COMPLETED")
+  REPLICATION_STATUS_COMPLETED = 5;
+}
+
+// 枚举类型表示复制时间状态
+enum ReplicationTimeStatus {
+  // 默认值
+  REPLICATION_TIME_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  REPLICATION_TIME_STATUS_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  REPLICATION_TIME_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示请求收费方
+enum RequestCharged {
+  // 默认值
+  REQUEST_CHARGED_UNDEFINED = 0;
+
+  // 请求者 ("requester")
+  REQUEST_CHARGED_REQUESTER = 1;
+}
+
+// 枚举类型表示请求付款方
+enum RequestPayer {
+  // 默认值
+  REQUEST_PAYER_UNDEFINED = 0;
+
+  // 请求者 ("requester")
+  REQUEST_PAYER_REQUESTER = 1;
+}
+
+// 枚举类型表示恢复请求类型
+enum RestoreRequestType {
+  // 默认值
+  RESTORE_REQUEST_TYPE_UNDEFINED = 0;
+
+  // 选择 ("SELECT")
+  RESTORE_REQUEST_TYPE_SELECT = 1;
+}
+
+// 枚举类型表示服务器端加密方式
+enum ServerSideEncryption {
+  // 默认值
+  SERVER_SIDE_ENCRYPTION_UNDEFINED = 0;
+
+  // AES-256 加密 ("AES256")
+  SERVER_SIDE_ENCRYPTION_AES256 = 1;
+
+  // AWS KMS 加密 ("aws:kms")
+  SERVER_SIDE_ENCRYPTION_AWS_KMS = 2;
+
+  // AWS KMS DSSE 加密 ("aws:kms:dsse")
+  SERVER_SIDE_ENCRYPTION_AWS_KMS_DSSE = 3;
+}
+
+// 枚举类型表示会话模式
+enum SessionMode {
+  // 默认值
+  SESSION_MODE_UNDEFINED = 0;
+
+  // 只读 ("ReadOnly")
+  SESSION_MODE_READ_ONLY = 1;
+
+  // 读写 ("ReadWrite")
+  SESSION_MODE_READ_WRITE = 2;
+}
+
+// 枚举类型表示 SSE-KMS 加密对象状态
+enum SseKmsEncryptedObjectsStatus {
+  // 默认值
+  SSE_KMS_ENCRYPTED_OBJECTS_STATUS_UNDEFINED = 0;
+
+  // 启用 ("Enabled")
+  SSE_KMS_ENCRYPTED_OBJECTS_STATUS_ENABLED = 1;
+
+  // 禁用 ("Disabled")
+  SSE_KMS_ENCRYPTED_OBJECTS_STATUS_DISABLED = 2;
+}
+
+// 枚举类型表示存储类
+enum StorageClass {
+  // 默认值
+  STORAGE_CLASS_UNDEFINED = 0;
+
+  // 标准 ("STANDARD")
+  STORAGE_CLASS_STANDARD = 1;
+
+  // 减少冗余 ("REDUCED_REDUNDANCY")
+  STORAGE_CLASS_REDUCED_REDUNDANCY = 2;
+
+  // 标准 IA ("STANDARD_IA")
+  STORAGE_CLASS_STANDARD_IA = 3;
+
+  // 单区 IA ("ONEZONE_IA")
+  STORAGE_CLASS_ONEZONE_IA = 4;
+
+  // 智能分层 ("INTELLIGENT_TIERING")
+  STORAGE_CLASS_INTELLIGENT_TIERING = 5;
+
+  // 冰川 ("GLACIER")
+  STORAGE_CLASS_GLACIER = 6;
+
+  // 深度归档 ("DEEP_ARCHIVE")
+  STORAGE_CLASS_DEEP_ARCHIVE = 7;
+
+  // 外部存储 ("OUTPOSTS")
+  STORAGE_CLASS_OUTPOSTS = 8;
+
+  // 冰川 IR ("GLACIER_IR")
+  STORAGE_CLASS_GLACIER_IR = 9;
+
+  // 雪 ("SNOW")
+  STORAGE_CLASS_SNOW = 10;
+
+  // 快速单区 ("EXPRESS_ONEZONE")
+  STORAGE_CLASS_EXPRESS_ONEZONE = 11;
+}
+
+// 枚举类型表示存储类分析架构版本
+enum StorageClassAnalysisSchemaVersion {
+  // 默认值
+  STORAGE_CLASS_ANALYSIS_SCHEMA_VERSION_UNDEFINED = 0;
+
+  // 版本 1 ("V_1")
+  STORAGE_CLASS_ANALYSIS_SCHEMA_VERSION_V1 = 1;
+}
+
+// 枚举类型表示标记指令
+enum TaggingDirective {
+  // 默认值
+  TAGGING_DIRECTIVE_UNDEFINED = 0;
+
+  // 复制 ("COPY")
+  TAGGING_DIRECTIVE_COPY = 1;
+
+  // 替换 ("REPLACE")
+  TAGGING_DIRECTIVE_REPLACE = 2;
+}
+
+// 枚举类型表示层级
+enum Tier {
+  // 默认值
+  TIER_UNDEFINED = 0;
+
+  // 标准 ("Standard")
+  TIER_STANDARD = 1;
+
+  // 批量 ("Bulk")
+  TIER_BULK = 2;
+
+  // 加急 ("Expedited")
+  TIER_EXPEDITED = 3;
+}
+
+// 枚举类型表示转换存储类
+enum TransitionStorageClass {
+  // 默认值
+  TRANSITION_STORAGE_CLASS_UNDEFINED = 0;
+
+  // 冰川 ("GLACIER")
+  TRANSITION_STORAGE_CLASS_GLACIER = 1;
+
+  // 标准 IA ("STANDARD_IA")
+  TRANSITION_STORAGE_CLASS_STANDARD_IA = 2;
+
+  // 单区 IA ("ONEZONE_IA")
+  TRANSITION_STORAGE_CLASS_ONEZONE_IA = 3;
+
+  // 智能分层 ("INTELLIGENT_TIERING")
+  TRANSITION_STORAGE_CLASS_INTELLIGENT_TIERING = 4;
+
+  // 深度归档 ("DEEP_ARCHIVE")
+  TRANSITION_STORAGE_CLASS_DEEP_ARCHIVE = 5;
+
+  // 冰川 IR ("GLACIER_IR")
+  TRANSITION_STORAGE_CLASS_GLACIER_IR = 6;
+}
+
+// 枚举类型表示类型
+enum Type {
+  // 默认值
+  TYPE_UNDEFINED = 0;
+
+  // 规范用户 ("CanonicalUser")
+  TYPE_CANONICAL_USER = 1;
+
+  // 通过电子邮件的亚马逊客户 ("AmazonCustomerByEmail")
+  TYPE_AMAZON_CUSTOMER_BY_EMAIL = 2;
+
+  // 组 ("Group")
+  TYPE_GROUP = 3;
+}
+
+// 枚举类型表示桶的位置约束
+enum BucketLocationConstraint {
+  // 默认值
+  BUCKET_LOCATION_CONSTRAINT_UNDEFINED = 0;
+
+  // 非洲 (af-south-1)
+  BUCKET_LOCATION_CONSTRAINT_AF_SOUTH_1 = 1;
+
+  // 亚太东南 (ap-east-1)
+  BUCKET_LOCATION_CONSTRAINT_AP_EAST_1 = 2;
+
+  // 亚太东北 1 (ap-northeast-1)
+  BUCKET_LOCATION_CONSTRAINT_AP_NORTHEAST_1 = 3;
+
+  // 亚太东北 2 (ap-northeast-2)
+  BUCKET_LOCATION_CONSTRAINT_AP_NORTHEAST_2 = 4;
+
+  // 亚太东北 3 (ap-northeast-3)
+  BUCKET_LOCATION_CONSTRAINT_AP_NORTHEAST_3 = 5;
+
+  // 亚太南部 1 (ap-south-1)
+  BUCKET_LOCATION_CONSTRAINT_AP_SOUTH_1 = 6;
+
+  // 亚太南部 2 (ap-south-2)
+  BUCKET_LOCATION_CONSTRAINT_AP_SOUTH_2 = 7;
+
+  // 亚太东南 1 (ap-southeast-1)
+  BUCKET_LOCATION_CONSTRAINT_AP_SOUTHEAST_1 = 8;
+
+  // 亚太东南 2 (ap-southeast-2)
+  BUCKET_LOCATION_CONSTRAINT_AP_SOUTHEAST_2 = 9;
+
+  // 亚太东南 3 (ap-southeast-3)
+  BUCKET_LOCATION_CONSTRAINT_AP_SOUTHEAST_3 = 10;
+
+  // 加拿大中部 (ca-central-1)
+  BUCKET_LOCATION_CONSTRAINT_CA_CENTRAL_1 = 11;
+
+  // 中国北部 (cn-north-1)
+  BUCKET_LOCATION_CONSTRAINT_CN_NORTH_1 = 12;
+
+  // 中国西北 (cn-northwest-1)
+  BUCKET_LOCATION_CONSTRAINT_CN_NORTHWEST_1 = 13;
+
+  // 欧洲 (EU)
+  BUCKET_LOCATION_CONSTRAINT_EU = 14;
+
+  // 欧洲中部 1 (eu-central-1)
+  BUCKET_LOCATION_CONSTRAINT_EU_CENTRAL_1 = 15;
+
+  // 欧洲北部 1 (eu-north-1)
+  BUCKET_LOCATION_CONSTRAINT_EU_NORTH_1 = 16;
+
+  // 欧洲南部 1 (eu-south-1)
+  BUCKET_LOCATION_CONSTRAINT_EU_SOUTH_1 = 17;
+
+  // 欧洲南部 2 (eu-south-2)
+  BUCKET_LOCATION_CONSTRAINT_EU_SOUTH_2 = 18;
+
+  // 欧洲西部 1 (eu-west-1)
+  BUCKET_LOCATION_CONSTRAINT_EU_WEST_1 = 19;
+
+  // 欧洲西部 2 (eu-west-2)
+  BUCKET_LOCATION_CONSTRAINT_EU_WEST_2 = 20;
+
+  // 欧洲西部 3 (eu-west-3)
+  BUCKET_LOCATION_CONSTRAINT_EU_WEST_3 = 21;
+
+  // 中东南部 (me-south-1)
+  BUCKET_LOCATION_CONSTRAINT_ME_SOUTH_1 = 22;
+
+  // 南美东部 (sa-east-1)
+  BUCKET_LOCATION_CONSTRAINT_SA_EAST_1 = 23;
+
+  // 美国东部 2 (us-east-2)
+  BUCKET_LOCATION_CONSTRAINT_US_EAST_2 = 24;
+
+  // 美国政府东部 1 (us-gov-east-1)
+  BUCKET_LOCATION_CONSTRAINT_US_GOV_EAST_1 = 25;
+
+  // 美国政府西部 1 (us-gov-west-1)
+  BUCKET_LOCATION_CONSTRAINT_US_GOV_WEST_1 = 26;
+
+  // 美国西部 1 (us-west-1)
+  BUCKET_LOCATION_CONSTRAINT_US_WEST_1 = 27;
+
+  // 美国西部 2 (us-west-2)
+  BUCKET_LOCATION_CONSTRAINT_US_WEST_2 = 28;
+}

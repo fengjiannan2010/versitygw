@@ -121,6 +121,5 @@ func (x XattrMeta) Test(path string) error {
 	if errors.Is(err, syscall.ENOTSUP) {
 		return fmt.Errorf("xattrs are not supported on this filesystem")
 	}
-
 	return nil
 }
