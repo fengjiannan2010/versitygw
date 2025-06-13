@@ -77,34 +77,38 @@ type Posix struct {
 	// if the filesystem supports it. This is needed for cases where
 	// there are different filesystems mounted below the bucket level.
 	forceNoTmpFile bool
+
+	cacheDir string
 }
 
 var _ backend.Backend = &Posix{}
 
+var metaTmpDir string
+
+var metaTmpMultipartDir string
+
 const (
-	metaTmpDir          = ".sgwtmp"
-	metaTmpMultipartDir = metaTmpDir + "/multipart"
-	onameAttr           = "objname"
-	tagHdr              = "X-Amz-Tagging"
-	metaHdr             = "X-Amz-Meta"
-	contentTypeHdr      = "content-type"
-	contentEncHdr       = "content-encoding"
-	contentLangHdr      = "content-language"
-	contentDispHdr      = "content-disposition"
-	cacheCtrlHdr        = "cache-control"
-	expiresHdr          = "expires"
-	emptyMD5            = "\"d41d8cd98f00b204e9800998ecf8427e\""
-	aclkey              = "acl"
-	ownershipkey        = "ownership"
-	etagkey             = "etag"
-	checksumsKey        = "checksums"
-	policykey           = "policy"
-	bucketLockKey       = "bucket-lock"
-	objectRetentionKey  = "object-retention"
-	objectLegalHoldKey  = "object-legal-hold"
-	versioningKey       = "versioning"
-	deleteMarkerKey     = "delete-marker"
-	versionIdKey        = "version-id"
+	onameAttr          = "objname"
+	tagHdr             = "X-Amz-Tagging"
+	metaHdr            = "X-Amz-Meta"
+	contentTypeHdr     = "content-type"
+	contentEncHdr      = "content-encoding"
+	contentLangHdr     = "content-language"
+	contentDispHdr     = "content-disposition"
+	cacheCtrlHdr       = "cache-control"
+	expiresHdr         = "expires"
+	emptyMD5           = "\"d41d8cd98f00b204e9800998ecf8427e\""
+	aclkey             = "acl"
+	ownershipkey       = "ownership"
+	etagkey            = "etag"
+	checksumsKey       = "checksums"
+	policykey          = "policy"
+	bucketLockKey      = "bucket-lock"
+	objectRetentionKey = "object-retention"
+	objectLegalHoldKey = "object-legal-hold"
+	versioningKey      = "versioning"
+	deleteMarkerKey    = "delete-marker"
+	versionIdKey       = "version-id"
 
 	nullVersionId = "null"
 
@@ -177,10 +181,11 @@ func New(rootdir string, meta meta.MetadataStorer, opts PosixOpts) (*Posix, erro
 		fmt.Println("Using sidecar directory for metadata:", sidecardirAbs)
 	}
 
-	return &Posix{
+	posix := &Posix{
 		meta:           meta,
 		rootfd:         f,
 		rootdir:        rootdir,
+		cacheDir:       "",
 		euid:           os.Geteuid(),
 		egid:           os.Getegid(),
 		chownuid:       opts.ChownUID,
@@ -189,7 +194,11 @@ func New(rootdir string, meta meta.MetadataStorer, opts PosixOpts) (*Posix, erro
 		versioningDir:  verioningdirAbs,
 		newDirPerm:     opts.NewDirPerm,
 		forceNoTmpFile: opts.ForceNoTmpFile,
-	}, nil
+	}
+
+	metaTmpDir = ".sgwtmp"
+	metaTmpMultipartDir = filepath.Join(posix.cacheDir, metaTmpDir, "multipart")
+	return posix, nil
 }
 
 func validateSubDir(root, dir string) (string, error) {
@@ -440,9 +449,7 @@ func (p *Posix) isBucketEmpty(bucket string) error {
 			return fmt.Errorf("readdir bucket: %w", err)
 		}
 		if err == nil {
-			if len(ents) == 1 && ents[0].Name() != metaTmpDir {
-				return s3err.GetAPIError(s3err.ErrVersionedBucketNotEmpty)
-			} else if len(ents) > 1 {
+			if len(ents) > 1 {
 				return s3err.GetAPIError(s3err.ErrVersionedBucketNotEmpty)
 			}
 		}
@@ -455,9 +462,7 @@ func (p *Posix) isBucketEmpty(bucket string) error {
 	if errors.Is(err, fs.ErrNotExist) {
 		return s3err.GetAPIError(s3err.ErrNoSuchBucket)
 	}
-	if len(ents) == 1 && ents[0].Name() != metaTmpDir {
-		return s3err.GetAPIError(s3err.ErrBucketNotEmpty)
-	} else if len(ents) > 1 {
+	if len(ents) > 1 {
 		return s3err.GetAPIError(s3err.ErrBucketNotEmpty)
 	}
 
@@ -702,9 +707,9 @@ func (p *Posix) createObjVersion(bucket, key string, size int64, acc auth.Accoun
 	if err != nil {
 		return versionPath, fmt.Errorf("load object attributes: %w", err)
 	}
-
-	versionBucketPath := filepath.Join(p.versioningDir, bucket)
+	//TODO 测试后在修改
 	versioningKey := filepath.Join(genObjVersionKey(key), versionId)
+	versionBucketPath := filepath.Join(p.versioningDir, bucket)
 	versionTmpPath := filepath.Join(versionBucketPath, metaTmpDir)
 	f, err := p.openTmpFile(versionTmpPath, versionBucketPath, versioningKey,
 		size, acc, doFalloc, p.forceNoTmpFile)
@@ -776,7 +781,7 @@ func (p *Posix) ListObjectVersions(ctx context.Context, input *s3.ListObjectVers
 
 	fileSystem := os.DirFS(bucket)
 	results, err := backend.WalkVersions(ctx, fileSystem, prefix, delim, keyMarker, versionIdMarker, max,
-		p.fileToObjVersions(bucket), []string{metaTmpDir})
+		p.fileToObjVersions(bucket))
 	if err != nil {
 		return s3response.ListVersionsResult{}, fmt.Errorf("walk %v: %w", bucket, err)
 	}
@@ -1226,7 +1231,8 @@ func (p *Posix) CreateMultipartUpload(ctx context.Context, mpu s3response.Create
 	// multiple uploads for same object name allowed,
 	// they will all go into the same hashed name directory
 	objdir := filepath.Join(metaTmpMultipartDir, fmt.Sprintf("%x", objNameSum))
-	tmppath := filepath.Join(bucket, objdir)
+	// TODO 修改临时文件路径
+	tmppath := filepath.Join("", objdir)
 	// the unique upload id is a directory for all of the parts
 	// associated with this specific multipart upload
 	err = os.MkdirAll(filepath.Join(tmppath, uploadID), 0755)
@@ -1372,6 +1378,39 @@ func getPartChecksum(algo types.ChecksumAlgorithm, part types.CompletedPart) str
 	}
 }
 
+func (p *Posix) cleanPartMeta(input *s3.CompleteMultipartUploadInput) error {
+	bucket := *input.Bucket
+	object := *input.Key
+	uploadID := *input.UploadId
+	parts := input.MultipartUpload.Parts
+
+	// hash object name for multipart container
+	objNameSum := sha256.Sum256([]byte(object))
+	// multiple uploads for same object name allowed,
+	// they will all go into the same hashed name directory
+	objdir := filepath.Join(metaTmpMultipartDir, fmt.Sprintf("%x", objNameSum))
+	err := p.meta.DeleteAttributes(bucket, objdir)
+	if err != nil {
+		return fmt.Errorf("delete object attributes: %w", err)
+	}
+
+	objuid := filepath.Join(objdir, uploadID)
+	err = p.meta.DeleteAttributes(bucket, objuid)
+	if err != nil {
+		return fmt.Errorf("delete object attributes: %w", err)
+	}
+
+	for _, part := range parts {
+		partObjPath := filepath.Join(objdir, uploadID, fmt.Sprintf("%v", *part.PartNumber))
+		err = p.meta.DeleteAttributes(bucket, partObjPath)
+		if err != nil {
+			return fmt.Errorf("delete object attributes: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func (p *Posix) CompleteMultipartUpload(ctx context.Context, input *s3.CompleteMultipartUploadInput) (s3response.CompleteMultipartUploadResult, string, error) {
 	acct, ok := ctx.Value("account").(auth.Account)
 	if !ok {
@@ -1452,7 +1491,8 @@ func (p *Posix) CompleteMultipartUpload(ctx context.Context, input *s3.CompleteM
 		partNumber = *part.PartNumber
 
 		partObjPath := filepath.Join(objdir, uploadID, fmt.Sprintf("%v", *part.PartNumber))
-		fullPartPath := filepath.Join(bucket, partObjPath)
+		// TODO 修改临时文件路径
+		fullPartPath := filepath.Join("", partObjPath)
 		fi, err := os.Lstat(fullPartPath)
 		if err != nil {
 			return res, "", s3err.GetAPIError(s3err.ErrInvalidPart)
@@ -1505,7 +1545,8 @@ func (p *Posix) CompleteMultipartUpload(ctx context.Context, input *s3.CompleteM
 		}
 	}
 
-	f, err := p.openTmpFile(filepath.Join(bucket, metaTmpDir), bucket, object,
+	// TODO 修改临时文件路径
+	f, err := p.openTmpFile(metaTmpDir, bucket, object,
 		totalsize, acct, skipFalloc, p.forceNoTmpFile)
 	if err != nil {
 		if errors.Is(err, syscall.EDQUOT) {
@@ -1517,7 +1558,8 @@ func (p *Posix) CompleteMultipartUpload(ctx context.Context, input *s3.CompleteM
 
 	for _, part := range parts {
 		partObjPath := filepath.Join(objdir, uploadID, fmt.Sprintf("%v", *part.PartNumber))
-		fullPartPath := filepath.Join(bucket, partObjPath)
+		// TODO 修改临时文件路径
+		fullPartPath := filepath.Join("", partObjPath)
 		pf, err := os.Open(fullPartPath)
 		if err != nil {
 			return res, "", fmt.Errorf("open part %v: %v", *part.PartNumber, err)
@@ -1705,11 +1747,16 @@ func (p *Posix) CompleteMultipartUpload(ctx context.Context, input *s3.CompleteM
 		return res, "", fmt.Errorf("link object in namespace: %w", err)
 	}
 
+	// TODO 修改临时文件路径
 	// cleanup tmp dirs
-	os.RemoveAll(filepath.Join(bucket, objdir, uploadID))
+	os.RemoveAll(filepath.Join("", objdir, uploadID))
 	// use Remove for objdir in case there are still other uploads
 	// for same object name outstanding, this will fail if there are
-	os.Remove(filepath.Join(bucket, objdir))
+	// TODO 修改临时文件路径
+	os.Remove(filepath.Join("", objdir))
+
+	//TODO 清理Part块Meta数据
+	p.cleanPartMeta(input)
 
 	return s3response.CompleteMultipartUploadResult{
 		Bucket:            &bucket,
@@ -1804,7 +1851,8 @@ func numberOfChecksums(part types.CompletedPart) int {
 
 func (p *Posix) checkUploadIDExists(bucket, object, uploadID string) ([32]byte, error) {
 	sum := sha256.Sum256([]byte(object))
-	objdir := filepath.Join(bucket, metaTmpMultipartDir, fmt.Sprintf("%x", sum))
+	// TODO 修改临时文件路径
+	objdir := filepath.Join("", metaTmpMultipartDir, fmt.Sprintf("%x", sum))
 
 	_, err := os.Stat(filepath.Join(objdir, uploadID))
 	if errors.Is(err, fs.ErrNotExist) {
@@ -1818,7 +1866,8 @@ func (p *Posix) checkUploadIDExists(bucket, object, uploadID string) ([32]byte, 
 
 func (p *Posix) retrieveUploadId(bucket, object string) (string, [32]byte, error) {
 	sum := sha256.Sum256([]byte(object))
-	objdir := filepath.Join(bucket, metaTmpMultipartDir, fmt.Sprintf("%x", sum))
+	// TODO 修改临时文件路径
+	objdir := filepath.Join("", metaTmpMultipartDir, fmt.Sprintf("%x", sum))
 
 	entries, err := os.ReadDir(objdir)
 	if err != nil || len(entries) == 0 {
@@ -1973,7 +2022,8 @@ func (p *Posix) AbortMultipartUpload(_ context.Context, mpu *s3.AbortMultipartUp
 	}
 
 	sum := sha256.Sum256([]byte(object))
-	objdir := filepath.Join(bucket, metaTmpMultipartDir, fmt.Sprintf("%x", sum))
+	// TODO 修改临时文件路径
+	objdir := filepath.Join("", metaTmpMultipartDir, fmt.Sprintf("%x", sum))
 
 	_, err = os.Stat(filepath.Join(objdir, uploadID))
 	if err != nil {
@@ -2015,7 +2065,8 @@ func (p *Posix) ListMultipartUploads(_ context.Context, mpu *s3.ListMultipartUpl
 	}
 
 	// ignore readdir error and use the empty list returned
-	objs, _ := os.ReadDir(filepath.Join(bucket, metaTmpMultipartDir))
+	// TODO 修改临时文件路径
+	objs, _ := os.ReadDir(filepath.Join("", metaTmpMultipartDir))
 
 	var uploads []s3response.Upload
 	var resultUpds []s3response.Upload
@@ -2044,7 +2095,8 @@ func (p *Posix) ListMultipartUploads(_ context.Context, mpu *s3.ListMultipartUpl
 			continue
 		}
 
-		upids, err := os.ReadDir(filepath.Join(bucket, metaTmpMultipartDir, obj.Name()))
+		// TODO 修改临时文件路径
+		upids, err := os.ReadDir(filepath.Join("", metaTmpMultipartDir, obj.Name()))
 		if err != nil {
 			continue
 		}
@@ -2053,11 +2105,6 @@ func (p *Posix) ListMultipartUploads(_ context.Context, mpu *s3.ListMultipartUpl
 			if !upid.IsDir() {
 				continue
 			}
-
-			// userMetaData := make(map[string]string)
-			// upiddir := filepath.Join(bucket, metaTmpMultipartDir, obj.Name(), upid.Name())
-			// loadUserMetaData(upiddir, userMetaData)
-
 			fi, err := upid.Info()
 			if err != nil {
 				return lmu, fmt.Errorf("stat %q: %w", upid.Name(), err)
@@ -2186,7 +2233,8 @@ func (p *Posix) ListParts(ctx context.Context, input *s3.ListPartsInput) (s3resp
 	}
 
 	objdir := filepath.Join(metaTmpMultipartDir, fmt.Sprintf("%x", sum))
-	tmpdir := filepath.Join(bucket, objdir)
+	// TODO 修改临时文件路径
+	tmpdir := filepath.Join("", objdir)
 
 	ents, err := os.ReadDir(filepath.Join(tmpdir, uploadID))
 	if errors.Is(err, fs.ErrNotExist) {
@@ -2322,7 +2370,8 @@ func (p *Posix) UploadPart(ctx context.Context, input *s3.UploadPartInput) (*s3.
 	objdir := filepath.Join(metaTmpMultipartDir, fmt.Sprintf("%x", sum))
 	mpPath := filepath.Join(objdir, uploadID)
 
-	_, err = os.Stat(filepath.Join(bucket, mpPath))
+	// TODO 修改临时文件路径
+	_, err = os.Stat(filepath.Join("", mpPath))
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, s3err.GetAPIError(s3err.ErrNoSuchUpload)
 	}
@@ -2332,7 +2381,8 @@ func (p *Posix) UploadPart(ctx context.Context, input *s3.UploadPartInput) (*s3.
 
 	partPath := filepath.Join(mpPath, fmt.Sprintf("%v", *part))
 
-	f, err := p.openTmpFile(filepath.Join(bucket, objdir),
+	// TODO 修改临时文件路径
+	f, err := p.openTmpFile(filepath.Join("", objdir),
 		bucket, partPath, length, acct, doFalloc, p.forceNoTmpFile)
 	if err != nil {
 		if errors.Is(err, syscall.EDQUOT) {
@@ -2449,7 +2499,7 @@ func (p *Posix) UploadPart(ctx context.Context, input *s3.UploadPartInput) (*s3.
 		}
 	}
 
-	err = f.link()
+	err = f.linkPart()
 	if err != nil {
 		return nil, fmt.Errorf("link object in namespace: %w", err)
 	}
@@ -2481,7 +2531,8 @@ func (p *Posix) UploadPartCopy(ctx context.Context, upi *s3.UploadPartCopyInput)
 	sum := sha256.Sum256([]byte(*upi.Key))
 	objdir := filepath.Join(metaTmpMultipartDir, fmt.Sprintf("%x", sum))
 
-	_, err = os.Stat(filepath.Join(*upi.Bucket, objdir, *upi.UploadId))
+	// TODO 修改临时文件路径
+	_, err = os.Stat(filepath.Join("", objdir, *upi.UploadId))
 	if errors.Is(err, fs.ErrNotExist) {
 		return s3response.CopyPartResult{}, s3err.GetAPIError(s3err.ErrNoSuchUpload)
 	}
@@ -2551,7 +2602,8 @@ func (p *Posix) UploadPartCopy(ctx context.Context, upi *s3.UploadPartCopyInput)
 		return s3response.CopyPartResult{}, err
 	}
 
-	f, err := p.openTmpFile(filepath.Join(*upi.Bucket, objdir),
+	// TODO 修改临时文件路径
+	f, err := p.openTmpFile(filepath.Join("", objdir),
 		*upi.Bucket, partPath, length, acct, doFalloc, p.forceNoTmpFile)
 	if err != nil {
 		if errors.Is(err, syscall.EDQUOT) {
@@ -2649,7 +2701,7 @@ func (p *Posix) UploadPartCopy(ctx context.Context, upi *s3.UploadPartCopyInput)
 		return s3response.CopyPartResult{}, fmt.Errorf("set etag attr: %w", err)
 	}
 
-	err = f.link()
+	err = f.linkPart()
 	if err != nil {
 		return s3response.CopyPartResult{}, fmt.Errorf("link object in namespace: %w", err)
 	}
@@ -2792,7 +2844,8 @@ func (p *Posix) PutObject(ctx context.Context, po s3response.PutObjectInput) (s3
 		return s3response.PutObjectOutput{}, fmt.Errorf("stat object: %w", err)
 	}
 
-	f, err := p.openTmpFile(filepath.Join(*po.Bucket, metaTmpDir),
+	// TODO 修改临时文件路径
+	f, err := p.openTmpFile(metaTmpDir,
 		*po.Bucket, *po.Key, contentLength, acct, doFalloc, p.forceNoTmpFile)
 	if err != nil {
 		if errors.Is(err, syscall.EDQUOT) {
@@ -3145,7 +3198,8 @@ func (p *Posix) DeleteObject(ctx context.Context, input *s3.DeleteObjectInput) (
 					acct = auth.Account{}
 				}
 
-				f, err := p.openTmpFile(filepath.Join(bucket, metaTmpDir),
+				// TODO 修改临时文件路径
+				f, err := p.openTmpFile(metaTmpDir,
 					bucket, object, srcObjVersion.Size(), acct, doFalloc,
 					p.forceNoTmpFile)
 				if err != nil {
@@ -3300,13 +3354,33 @@ func (p *Posix) removeParents(bucket, object string) {
 			break
 		}
 
-		err = os.Remove(filepath.Join(bucket, parent))
-		if err != nil {
+		//TODO 删除对象时清理Meta信息
+		ents, err := os.ReadDir(filepath.Join(bucket, parent))
+		fmt.Println("ents:", len(ents))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			break
 		}
-
+		if len(ents) > 0 {
+			break
+		} else {
+			err = os.Remove(filepath.Join(bucket, parent))
+			if err != nil {
+				break
+			}
+			err := p.meta.DeleteAttributes(bucket, ensureTrailingSlash(filepath.ToSlash(parent)))
+			if err != nil {
+				break
+			}
+		}
 		objPath = parent
 	}
+}
+
+func ensureTrailingSlash(path string) string {
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+	return path
 }
 
 func (p *Posix) DeleteObjects(ctx context.Context, input *s3.DeleteObjectsInput) (s3response.DeleteResult, error) {
@@ -3608,7 +3682,8 @@ func (p *Posix) HeadObject(ctx context.Context, input *s3.HeadObjectInput) (*s3.
 			return nil, err
 		}
 
-		ents, err := os.ReadDir(filepath.Join(bucket, metaTmpMultipartDir, fmt.Sprintf("%x", sum), uploadId))
+		// TODO 修改临时文件路径
+		ents, err := os.ReadDir(filepath.Join("", metaTmpMultipartDir, fmt.Sprintf("%x", sum), uploadId))
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, s3err.GetAPIError(s3err.ErrNoSuchKey)
 		}
@@ -3618,7 +3693,8 @@ func (p *Posix) HeadObject(ctx context.Context, input *s3.HeadObjectInput) (*s3.
 
 		partPath := filepath.Join(metaTmpMultipartDir, fmt.Sprintf("%x", sum), uploadId, fmt.Sprintf("%v", *input.PartNumber))
 
-		part, err := os.Stat(filepath.Join(bucket, partPath))
+		// TODO 修改临时文件路径
+		part, err := os.Stat(filepath.Join("", partPath))
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, s3err.GetAPIError(s3err.ErrInvalidPart)
 		}
@@ -4202,7 +4278,7 @@ func (p *Posix) ListObjects(ctx context.Context, input *s3.ListObjectsInput) (s3
 
 	fileSystem := os.DirFS(bucket)
 	results, err := backend.Walk(ctx, fileSystem, prefix, delim, marker, maxkeys,
-		p.fileToObj(bucket, true), []string{metaTmpDir})
+		p.fileToObj(bucket, true))
 	if err != nil {
 		return s3response.ListObjectsResult{}, fmt.Errorf("walk %v: %w", bucket, err)
 	}
@@ -4361,7 +4437,7 @@ func (p *Posix) ListObjectsV2(ctx context.Context, input *s3.ListObjectsV2Input)
 
 	fileSystem := os.DirFS(bucket)
 	results, err := backend.Walk(ctx, fileSystem, prefix, delim, marker, maxkeys,
-		p.fileToObj(bucket, fetchOwner), []string{metaTmpDir})
+		p.fileToObj(bucket, fetchOwner))
 	if err != nil {
 		return s3response.ListObjectsV2Result{}, fmt.Errorf("walk %v: %w", bucket, err)
 	}
@@ -4913,6 +4989,11 @@ func listBucketFileInfos(bucketlinks bool) ([]fs.FileInfo, error) {
 
 	var fis []fs.FileInfo
 	for _, entry := range entries {
+		//TODO 添加过滤临时缓存目录
+		if entry.Name() == metaTmpDir {
+			continue
+		}
+
 		fi, err := entry.Info()
 		if err != nil {
 			continue

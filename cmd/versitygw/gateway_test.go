@@ -58,7 +58,12 @@ func initPosix(ctx context.Context) {
 		log.Fatalf("make temp directory: %v", err)
 	}
 
-	be, err := posix.New(tempdir, meta.XattrMeta{}, posix.PosixOpts{
+	ms, err := meta.NewSqlMeta("mate.sqlite")
+	if err != nil {
+		log.Fatalf("failed to init sqlite metadata: %w", err)
+	}
+
+	be, err := posix.New(tempdir, ms, posix.PosixOpts{
 		NewDirPerm: 0755,
 	})
 	if err != nil {

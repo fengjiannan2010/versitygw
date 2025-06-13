@@ -67,7 +67,7 @@ func (c cpMap) CpArray() []types.CommonPrefix {
 
 // Walk walks the supplied fs.FS and returns results compatible with list
 // objects responses
-func Walk(ctx context.Context, fileSystem fs.FS, prefix, delimiter, marker string, max int32, getObj GetObjFunc, skipdirs []string) (WalkResults, error) {
+func Walk(ctx context.Context, fileSystem fs.FS, prefix, delimiter, marker string, max int32, getObj GetObjFunc) (WalkResults, error) {
 	cpmap := cpMap{}
 	var objects []s3response.Object
 
@@ -105,9 +105,6 @@ func Walk(ctx context.Context, fileSystem fs.FS, prefix, delimiter, marker strin
 		// Ignore the root directory
 		if path == "." {
 			return nil
-		}
-		if contains(d.Name(), skipdirs) {
-			return fs.SkipDir
 		}
 
 		// After this point, return skipflag instead of nil
@@ -328,7 +325,7 @@ type GetVersionsFunc func(path, versionIdMarker string, pastVersionIdMarker *boo
 
 // WalkVersions walks the supplied fs.FS and returns results compatible with
 // ListObjectVersions action response
-func WalkVersions(ctx context.Context, fileSystem fs.FS, prefix, delimiter, keyMarker, versionIdMarker string, max int, getObj GetVersionsFunc, skipdirs []string) (WalkVersioningResults, error) {
+func WalkVersions(ctx context.Context, fileSystem fs.FS, prefix, delimiter, keyMarker, versionIdMarker string, max int, getObj GetVersionsFunc) (WalkVersioningResults, error) {
 	cpmap := cpMap{}
 	var objects []types.ObjectVersion
 	var delMarkers []types.DeleteMarkerEntry
@@ -354,10 +351,7 @@ func WalkVersions(ctx context.Context, fileSystem fs.FS, prefix, delimiter, keyM
 		if path == "." {
 			return nil
 		}
-		if contains(d.Name(), skipdirs) {
-			return fs.SkipDir
-		}
-
+		
 		if !pastMarker {
 			if path == keyMarker {
 				pastMarker = true

@@ -74,6 +74,25 @@ var (
 	defaultFilePerm fs.FileMode = 0644
 )
 
+func (tmp *tmpfile) linkPart() error {
+	tempname := tmp.f.Name()
+	// cleanup in case anything goes wrong, if rename succeeds then
+	// this will no longer exist
+	defer os.Remove(tempname)
+
+	objPath := tmp.objname
+
+	// reset default file mode because CreateTemp uses 0600
+	tmp.f.Chmod(defaultFilePerm)
+
+	err := tmp.f.Close()
+	if err != nil {
+		return fmt.Errorf("close tmpfile: %w", err)
+	}
+
+	return backend.MoveFile(tempname, objPath, defaultFilePerm)
+}
+
 func (tmp *tmpfile) link() error {
 	tempname := tmp.f.Name()
 	// cleanup in case anything goes wrong, if rename succeeds then

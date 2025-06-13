@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/fs"
 	"math"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 	"github.com/versity/versitygw/backend/meta"
@@ -140,11 +141,11 @@ func runPosix(ctx *cli.Context) error {
 	case nometa:
 		ms = meta.NoMeta{}
 	default:
-		ms = meta.XattrMeta{}
-		err := meta.XattrMeta{}.Test(gwroot)
+		sm, err := meta.NewSqlMeta(filepath.Join(gwroot, "mate.sqlite"))
 		if err != nil {
-			return fmt.Errorf("xattr check failed: %w", err)
+			return fmt.Errorf("failed to init sqlite metadata: %w", err)
 		}
+		ms = sm
 	}
 
 	be, err := posix.New(gwroot, ms, opts)

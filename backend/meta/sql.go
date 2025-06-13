@@ -21,13 +21,9 @@ type MetadataEntry struct {
 	Value     []byte
 }
 
-var (
-	// ErrNoSuchAttributeKey is returned when the key does not exist.
-	ErrNoSuchAttributeKey = errors.New("no such key")
-)
-
 // NewSqlMeta creates a new SqlMeta metadata storer using SQLite.
 func NewSqlMeta(dbPath string) (SqlMeta, error) {
+	fmt.Println("init dbPath:", dbPath)
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		return SqlMeta{}, fmt.Errorf("failed to open database: %v", err)
@@ -43,7 +39,7 @@ func (s SqlMeta) RetrieveAttribute(_ *os.File, bucket, object, attribute string)
 	var entry MetadataEntry
 	res := s.db.Where("bucket = ? AND object = ? AND attribute = ?", bucket, object, attribute).First(&entry)
 	if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		return nil, ErrNoSuchAttributeKey
+		return nil, ErrNoSuchKey
 	}
 	if res.Error != nil {
 		return nil, fmt.Errorf("failed to retrieve attribute: %v", res.Error)
@@ -75,7 +71,7 @@ func (s SqlMeta) DeleteAttribute(bucket, object, attribute string) error {
 		return fmt.Errorf("failed to delete attribute: %v", res.Error)
 	}
 	if res.RowsAffected == 0 {
-		return ErrNoSuchAttributeKey
+		return ErrNoSuchKey
 	}
 	return nil
 }
