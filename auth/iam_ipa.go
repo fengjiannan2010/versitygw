@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -52,7 +53,6 @@ type IpaIAMService struct {
 var _ IAMService = &IpaIAMService{}
 
 func NewIpaIAMService(rootAcc Account, host, vaultName, username, password string, isInsecure, debug bool) (*IpaIAMService, error) {
-
 	ipa := IpaIAMService{
 		id:        0,
 		version:   IpaVersion,
@@ -72,6 +72,7 @@ func NewIpaIAMService(rootAcc Account, host, vaultName, username, password strin
 	mTLSConfig := &tls.Config{InsecureSkipVerify: isInsecure}
 	tr := &http.Transport{
 		TLSClientConfig: mTLSConfig,
+		Proxy:           http.ProxyFromEnvironment,
 	}
 	ipa.client = http.Client{Jar: jar, Transport: tr}
 
@@ -102,13 +103,7 @@ func NewIpaIAMService(rootAcc Account, host, vaultName, username, password strin
 
 	ipa.kraTransportKey = cert.PublicKey.(*rsa.PublicKey)
 
-	isSupported := false
-	for _, algo := range vaultConfig.Wrapping_supported_algorithms {
-		if algo == "aes-128-cbc" {
-			isSupported = true
-			break
-		}
-	}
+	isSupported := slices.Contains(vaultConfig.Wrapping_supported_algorithms, "aes-128-cbc")
 
 	if !isSupported {
 		return nil,

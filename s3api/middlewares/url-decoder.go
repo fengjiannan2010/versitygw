@@ -26,7 +26,7 @@ import (
 
 func DecodeURL(logger s3log.AuditLogger, mm *metrics.Manager) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
-		unescp, err := url.QueryUnescape(string(ctx.Request().URI().PathOriginal()))
+		unescp, err := url.PathUnescape(string(ctx.Request().URI().PathOriginal()))
 		if err != nil {
 			return controllers.SendResponse(ctx, s3err.GetAPIError(s3err.ErrInvalidURI), &controllers.MetaOpts{Logger: logger, MetricsMng: mm})
 		}

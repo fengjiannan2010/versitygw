@@ -51,7 +51,7 @@ test_get_object_full_range_s3api_root() {
   bucket_file="bucket_file"
   echo -n "0123456789" > "$TEST_FILE_FOLDER/$bucket_file"
 
-  run setup_bucket "s3api" "$BUCKET_ONE_NAME"
+  run setup_bucket "$BUCKET_ONE_NAME"
   assert_success
 
   run put_object "s3api" "$TEST_FILE_FOLDER/$bucket_file" "$BUCKET_ONE_NAME" "$bucket_file"
@@ -81,7 +81,7 @@ test_put_object_s3api_root() {
   run create_test_files "$bucket_file"
   assert_success
 
-  run setup_buckets "s3api" "$BUCKET_ONE_NAME" "$BUCKET_TWO_NAME"
+  run setup_buckets "$BUCKET_ONE_NAME" "$BUCKET_TWO_NAME"
   assert_success
 
   run put_object "s3api" "$TEST_FILE_FOLDER/$bucket_file" "$BUCKET_ONE_NAME" "$bucket_file"
@@ -117,7 +117,7 @@ test_get_put_object_legal_hold_s3api_root() {
   run get_check_object_lock_config_enabled "$BUCKET_ONE_NAME"
   assert_success
 
-  run put_object_legal_hold "$BUCKET_ONE_NAME" "$bucket_file" "ON"
+  run put_object_legal_hold "s3api" "$BUCKET_ONE_NAME" "$bucket_file" "ON"
   assert_success
 
   run get_and_check_legal_hold "s3api" "$BUCKET_ONE_NAME" "$bucket_file" "ON"
@@ -133,7 +133,7 @@ test_get_put_object_legal_hold_s3api_root() {
   # shellcheck disable=SC2154
   assert_output --partial "Object is WORM protected and cannot be overwritten"
 
-  run put_object_legal_hold "$BUCKET_ONE_NAME" "$bucket_file" "OFF"
+  run put_object_legal_hold "s3api" "$BUCKET_ONE_NAME" "$bucket_file" "OFF"
   assert_success
 
   run delete_object_with_user "s3api" "$BUCKET_ONE_NAME" "$bucket_file" "$username" "$password"
@@ -208,14 +208,14 @@ test_retention_bypass_s3api_root() {
   run put_bucket_policy "s3api" "$BUCKET_ONE_NAME" "$TEST_FILE_FOLDER/$policy_file"
   assert_success
 
-  run delete_object_bypass_retention "$BUCKET_ONE_NAME" "$bucket_file" "$username" "$secret_key"
+  run delete_object_bypass_retention "s3api" "$BUCKET_ONE_NAME" "$bucket_file" "$username" "$secret_key"
   assert_success
 }
 
 legal_hold_retention_setup() {
   assert [ $# -eq 3 ]
 
-  run bucket_cleanup_if_bucket_exists "s3api" "$BUCKET_ONE_NAME"
+  run bucket_cleanup_if_bucket_exists "$BUCKET_ONE_NAME"
   assert_success
 
   run setup_user "$1" "$2" "user"

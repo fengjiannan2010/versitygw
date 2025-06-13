@@ -38,7 +38,7 @@ export RUN_USERS=true
   run dd if=/dev/urandom of="$TEST_FILE_FOLDER/$bucket_file" bs=5M count=1
   assert_success
 
-  run setup_bucket "s3api" "$BUCKET_ONE_NAME"
+  run setup_bucket "$BUCKET_ONE_NAME"
   assert_success
 
   run run_then_abort_multipart_upload "$BUCKET_ONE_NAME" "$bucket_file" "$TEST_FILE_FOLDER"/"$bucket_file" 4
@@ -54,7 +54,7 @@ export RUN_USERS=true
   run dd if=/dev/urandom of="$TEST_FILE_FOLDER/$bucket_file" bs=20M count=1
   assert_success
 
-  run setup_bucket "s3api" "$BUCKET_ONE_NAME"
+  run setup_bucket "$BUCKET_ONE_NAME"
   assert_success
 
   run multipart_upload "$BUCKET_ONE_NAME" "$bucket_file" "$TEST_FILE_FOLDER"/"$bucket_file" 4
@@ -96,7 +96,7 @@ export RUN_USERS=true
   run check_verify_object_tags "s3api" "$BUCKET_ONE_NAME" "$bucket_file" "$expected_tag_key" "$expected_tag_val"
   assert_success
 
-  run put_object_legal_hold "$BUCKET_ONE_NAME" "$bucket_file" "OFF"
+  run put_object_legal_hold "s3api" "$BUCKET_ONE_NAME" "$bucket_file" "OFF"
   assert_success
 
   run get_and_check_legal_hold "s3api" "$BUCKET_ONE_NAME" "$bucket_file" "OFF"
@@ -111,7 +111,7 @@ export RUN_USERS=true
   run dd if=/dev/urandom of="$TEST_FILE_FOLDER/$bucket_file" bs=20M count=1
   assert_success
 
-  run setup_bucket "s3api" "$BUCKET_ONE_NAME"
+  run setup_bucket "$BUCKET_ONE_NAME"
   assert_success
 
   run multipart_upload_from_bucket "$BUCKET_ONE_NAME" "$bucket_file" "$TEST_FILE_FOLDER"/"$bucket_file" 4
@@ -145,7 +145,7 @@ export RUN_USERS=true
   run dd if=/dev/urandom of="$TEST_FILE_FOLDER/$bucket_file" bs=5M count=1
   assert_success
 
-  run setup_bucket "s3api" "$BUCKET_ONE_NAME"
+  run setup_bucket "$BUCKET_ONE_NAME"
   assert_success
 
   run start_multipart_upload_list_check_parts "$BUCKET_ONE_NAME" "$bucket_file" "$TEST_FILE_FOLDER"/"$bucket_file"

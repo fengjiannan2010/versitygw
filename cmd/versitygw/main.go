@@ -50,6 +50,7 @@ var (
 	logWebhookURL, accessLog                 string
 	adminLogFile                             string
 	healthPath                               string
+	virtualDomain                            string
 	debug                                    bool
 	pprof                                    string
 	quiet                                    bool
@@ -225,6 +226,13 @@ func initFlags() []cli.Flag {
 			EnvVars:     []string{"VGW_QUIET"},
 			Destination: &quiet,
 			Aliases:     []string{"q"},
+		},
+		&cli.StringFlag{
+			Name:        "virtual-domain",
+			Usage:       "enables the virtual host style bucket addressing with the specified arg as the base domain",
+			EnvVars:     []string{"VGW_VIRTUAL_DOMAIN"},
+			Destination: &virtualDomain,
+			Aliases:     []string{"vd"},
 		},
 		&cli.StringFlag{
 			Name:        "access-log",
@@ -601,6 +609,9 @@ func runGateway(ctx context.Context, be backend.Backend) error {
 	}
 	if readonly {
 		opts = append(opts, s3api.WithReadOnly())
+	}
+	if virtualDomain != "" {
+		opts = append(opts, s3api.WithHostStyle(virtualDomain))
 	}
 
 	admApp := fiber.New(fiber.Config{
