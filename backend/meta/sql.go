@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"log"
 	"os"
 )
 
@@ -23,8 +25,10 @@ type MetadataEntry struct {
 
 // NewSqlMeta creates a new SqlMeta metadata storer using SQLite.
 func NewSqlMeta(dbPath string) (SqlMeta, error) {
-	fmt.Println("init dbPath:", dbPath)
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	log.Printf("📦 Initializing SQLite DB: %s\n", dbPath)
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent), // 关闭日志
+	})
 	if err != nil {
 		return SqlMeta{}, fmt.Errorf("failed to open database: %v", err)
 	}

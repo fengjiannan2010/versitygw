@@ -21,8 +21,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/versity/versitygw/notify"
 	"io"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -79,6 +81,14 @@ type Posix struct {
 	forceNoTmpFile bool
 
 	cacheDir string
+
+	baseUrl string
+
+	endpointPath string
+
+	poolCode string
+
+	skipdirs []string
 }
 
 var _ backend.Backend = &Posix{}
@@ -133,6 +143,12 @@ type PosixOpts struct {
 	// ForceNoTmpFile disables the use of O_TMPFILE even if the filesystem
 	// supports it
 	ForceNoTmpFile bool
+
+	BaseUrl string
+
+	EndpointPath string
+
+	Skipdirs []string
 }
 
 func New(rootdir string, meta meta.MetadataStorer, opts PosixOpts) (*Posix, error) {
@@ -194,6 +210,14 @@ func New(rootdir string, meta meta.MetadataStorer, opts PosixOpts) (*Posix, erro
 		versioningDir:  verioningdirAbs,
 		newDirPerm:     opts.NewDirPerm,
 		forceNoTmpFile: opts.ForceNoTmpFile,
+		baseUrl:        opts.BaseUrl,
+		endpointPath:   opts.EndpointPath,
+		skipdirs:       opts.Skipdirs,
+	}
+	if posix.baseUrl == "" || posix.endpointPath == "" {
+		log.Printf("[runArcTaskNotify] baseUrl or endpointPath is empty, disable notify")
+	} else {
+		log.Printf("[runArcTaskNotify] baseUrl or endpointPath not empty, enable notify")
 	}
 
 	metaTmpDir = ".sgwtmp"
@@ -449,7 +473,10 @@ func (p *Posix) isBucketEmpty(bucket string) error {
 			return fmt.Errorf("readdir bucket: %w", err)
 		}
 		if err == nil {
-			if len(ents) > 1 {
+			//TODO 需要排除过滤文件或目录
+			if len(ents) == 1 && ents[0].Name() != p.skipdirs[0] {
+				return s3err.GetAPIError(s3err.ErrVersionedBucketNotEmpty)
+			} else if len(ents) > 1 {
 				return s3err.GetAPIError(s3err.ErrVersionedBucketNotEmpty)
 			}
 		}
@@ -462,7 +489,10 @@ func (p *Posix) isBucketEmpty(bucket string) error {
 	if errors.Is(err, fs.ErrNotExist) {
 		return s3err.GetAPIError(s3err.ErrNoSuchBucket)
 	}
-	if len(ents) > 1 {
+	//TODO 需要排除过滤文件或目录
+	if len(ents) == 1 && ents[0].Name() != p.skipdirs[0] {
+		return s3err.GetAPIError(s3err.ErrBucketNotEmpty)
+	} else if len(ents) > 1 {
 		return s3err.GetAPIError(s3err.ErrBucketNotEmpty)
 	}
 
@@ -781,7 +811,7 @@ func (p *Posix) ListObjectVersions(ctx context.Context, input *s3.ListObjectVers
 
 	fileSystem := os.DirFS(bucket)
 	results, err := backend.WalkVersions(ctx, fileSystem, prefix, delim, keyMarker, versionIdMarker, max,
-		p.fileToObjVersions(bucket))
+		p.fileToObjVersions(bucket), p.skipdirs)
 	if err != nil {
 		return s3response.ListVersionsResult{}, fmt.Errorf("walk %v: %w", bucket, err)
 	}
@@ -1507,9 +1537,12 @@ func (p *Posix) CompleteMultipartUpload(ctx context.Context, input *s3.CompleteM
 
 		b, err := p.meta.RetrieveAttribute(nil, bucket, partObjPath, etagkey)
 		etag := string(b)
-		if err != nil {
+		if err != nil && errors.Is(err, meta.ErrNoSuchKey) {
+			etag = *parts[i].ETag
+		} else {
 			etag = ""
 		}
+
 		if parts[i].ETag == nil || !backend.AreEtagsSame(etag, *parts[i].ETag) {
 			return res, "", s3err.GetAPIError(s3err.ErrInvalidPart)
 		}
@@ -1746,6 +1779,9 @@ func (p *Posix) CompleteMultipartUpload(ctx context.Context, input *s3.CompleteM
 	if err != nil {
 		return res, "", fmt.Errorf("link object in namespace: %w", err)
 	}
+
+	objPath := filepath.Join(f.bucket, f.objname)
+	_ = p.runArcTaskNotify(objPath, "1")
 
 	// TODO 修改临时文件路径
 	// cleanup tmp dirs
@@ -3004,6 +3040,9 @@ func (p *Posix) PutObject(ctx context.Context, po s3response.PutObjectInput) (s3
 	if err != nil {
 		return s3response.PutObjectOutput{}, s3err.GetAPIError(s3err.ErrExistingObjectIsDirectory)
 	}
+
+	objPath := filepath.Join(f.bucket, f.objname)
+	_ = p.runArcTaskNotify(objPath, "1")
 
 	// Set object tagging
 	if tags != nil {
@@ -4284,7 +4323,7 @@ func (p *Posix) ListObjects(ctx context.Context, input *s3.ListObjectsInput) (s3
 
 	fileSystem := os.DirFS(bucket)
 	results, err := backend.Walk(ctx, fileSystem, prefix, delim, marker, maxkeys,
-		p.fileToObj(bucket, true))
+		p.fileToObj(bucket, true), p.skipdirs)
 	if err != nil {
 		return s3response.ListObjectsResult{}, fmt.Errorf("walk %v: %w", bucket, err)
 	}
@@ -4444,7 +4483,7 @@ func (p *Posix) ListObjectsV2(ctx context.Context, input *s3.ListObjectsV2Input)
 
 	fileSystem := os.DirFS(bucket)
 	results, err := backend.Walk(ctx, fileSystem, prefix, delim, marker, maxkeys,
-		p.fileToObj(bucket, fetchOwner))
+		p.fileToObj(bucket, fetchOwner), p.skipdirs)
 	if err != nil {
 		return s3response.ListObjectsV2Result{}, fmt.Errorf("walk %v: %w", bucket, err)
 	}
@@ -5072,6 +5111,24 @@ func (p *Posix) retrieveChecksums(f *os.File, bucket, object string) (checksums 
 
 	err = json.Unmarshal(checksumsAtr, &checksums)
 	return checksums, err
+}
+
+// runArcTaskNotify 封装主调用逻辑
+func (p *Posix) runArcTaskNotify(path, ferryLevel string) error {
+	if p.baseUrl == "" || p.endpointPath == "" {
+		return nil
+	}
+	notifier := notify.NewArcTaskNotifier(p.baseUrl, p.endpointPath)
+	path = filepath.Clean(filepath.Join("/", path))
+	resp, data, err := notifier.NotifyFileTransfer(path, ferryLevel)
+	if err != nil {
+		log.Printf("[runArcTaskNotify] 创建任务失败: %v", err)
+		return fmt.Errorf("创建任务失败: %w", err)
+	}
+	// 输出响应信息
+	log.Printf("[runArcTaskNotify] 任务创建成功！响应消息: %s, 任务ID: %s, 设备ID: %s, 错误路径: %s",
+		resp.Msg, data.TaskID, data.DevID, data.ErrorPaths)
+	return nil
 }
 
 func getString(str *string) string {

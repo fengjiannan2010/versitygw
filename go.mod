@@ -23,7 +23,6 @@ require (
 	github.com/smira/go-statsd v1.3.4
 	github.com/urfave/cli/v2 v2.27.6
 	github.com/valyala/fasthttp v1.62.0
-	github.com/versity/scoutfs-go v0.0.0-20240325223134-38eb2f5f7d44
 	golang.org/x/sync v0.15.0
 	golang.org/x/sys v0.33.0
 	gorm.io/driver/sqlite v1.5.7
@@ -41,6 +40,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.20 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
+	github.com/go-resty/resty/v2 v2.16.5 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect

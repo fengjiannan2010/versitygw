@@ -7,22 +7,16 @@ before:
 builds:
   - goos:
       - linux
-      - darwin
-      - freebsd
-      # windows is untested, we can start doing windows releases
-      # if someone is interested in taking on testing
-      # - windows
+      - windows
     env:
-      # disable cgo to fix glibc issues: https://github.com/golang/go/issues/58550
-      # once we need to enable this, we will need to do per distro releases
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     main: ./cmd/versitygw
-    binary: versitygw
+    binary: netzongw
     goarch:
       - amd64
       - arm64
     ldflags:
-      - -X=main.Build={{.Commit}} -X=main.BuildTime={{.Date}} -X=main.Version={{.Version}}
+      - -X=main.Build=NETZON -X=main.BuildTime={{.Date}} -X=main.Version=1.0.14
 
 archives:
   - formats: [ 'tar.gz' ]
@@ -47,10 +41,6 @@ archives:
     - goos: windows
       formats: [ 'zip' ]
 
-    # Additional files/globs you want to add to the archive.
-    #
-    # Default: [ 'LICENSE*', 'README*', 'CHANGELOG', 'license*', 'readme*', 'changelog']
-    # Templates: allowed
     files:
       - README.md
       - LICENSE
@@ -59,70 +49,9 @@ archives:
 checksum:
   name_template: 'checksums.txt'
 
-snapshot:
-  version_template: "{{ incpatch .Version }}-{{.ShortCommit}}"
-
 changelog:
   sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
-      - '^Merge '
-
-nfpms:
-  - id: packages
-    package_name: versitygw
-    vendor: Versity Software
-    homepage: https://github.com/versity/versitygw
-    maintainer: Ben McClelland <ben.mcclelland@versity.com>
-
-    description: |-
-      The Versity S3 Gateway.
-      A high-performance tool facilitating translation between AWS S3 API
-      requests and various backend storage systems, including POSIX file
-      backend storage. Its stateless architecture enables deployment in
-      clusters for increased throughput, distributing requests across gateways
-      for optimal performance. With a focus on modularity, it supports future
-      extensions for additional backend systems.
-
-    license: Apache 2.0
-
-    ids:
-      - versitygw
-
-    formats:
-      - deb
-      - rpm
-
-    umask: 0o002
-    bindir: /usr/bin
-    epoch: "1"
-    release: "1"
-
-    rpm:
-      group: "System Environment/Daemons"
-      # RPM specific scripts.
-      scripts:
-        # The pretrans script runs before all RPM package transactions / stages.
-        #pretrans: ./extra/pretrans.sh
-        # The posttrans script runs after all RPM package transactions / stages.
-        posttrans: ./extra/posttrans.sh
-
-    contents:
-      - src: extra/versitygw@.service
-        dst: /lib/systemd/system/versitygw@.service
-
-      - src: extra/example.conf
-        dst: /etc/versitygw.d/example.conf
-        type: config
-  
-      - dst: /etc/versitygw.d
-        type: dir
-        file_info:
-          mode: 0700
-
-
-
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj

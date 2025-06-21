@@ -118,13 +118,11 @@ func main() {
 
 func initApp() *cli.App {
 	return &cli.App{
-		Usage: "Versity S3 Gateway",
-		Description: `The Versity S3 Gateway is an S3 protocol translator that allows an S3 client
+		Usage: "NETZON S3 Gateway",
+		Description: `The NETZON S3 Gateway is an S3 protocol translator that allows an S3 client
 to access the supported backend storage as if it was a native S3 service.
-VersityGW is an open-source project licensed under the Apache 2.0 License. The
-source code is hosted on GitHub at https://github.com/versity/versitygw, and
-documentation can be found in the GitHub wiki.`,
-		Copyright: "Copyright (c) 2023-2024 Versity Software",
+NETZONGW is an open-source project licensed under the Apache 2.0 License. `,
+		Copyright: "Copyright (c) 2023-2024 NETZON Software",
 		Action: func(ctx *cli.Context) error {
 			return ctx.App.Command("help").Run(ctx)
 		},
@@ -136,7 +134,7 @@ func initFlags() []cli.Flag {
 	return []cli.Flag{
 		&cli.BoolFlag{
 			Name:    "version",
-			Usage:   "list versitygw version",
+			Usage:   "list netzongw version",
 			Aliases: []string{"v"},
 			Action: func(*cli.Context, bool) error {
 				fmt.Println("Version  :", Version)
@@ -571,8 +569,8 @@ func runGateway(ctx context.Context, be backend.Backend) error {
 	}
 
 	app := fiber.New(fiber.Config{
-		AppName:               "versitygw",
-		ServerHeader:          "VERSITYGW",
+		AppName:               "netzongw",
+		ServerHeader:          "NETZONGW",
 		StreamRequestBody:     true,
 		DisableKeepalive:      true,
 		Network:               fiber.NetworkTCP,
@@ -615,8 +613,8 @@ func runGateway(ctx context.Context, be backend.Backend) error {
 	}
 
 	admApp := fiber.New(fiber.Config{
-		AppName:               "versitygw",
-		ServerHeader:          "VERSITYGW",
+		AppName:               "netzongw",
+		ServerHeader:          "NETZONGW",
 		Network:               fiber.NetworkTCP,
 		DisableStartupMessage: true,
 	})
@@ -825,7 +823,7 @@ func printBanner(port, admPort string, ssl, admSsl bool) {
 		}
 	}
 
-	title := "VersityGW"
+	title := "NETZONGW"
 	version := fmt.Sprintf("Version %v, Build %v", Version, Build)
 	urls := []string{}
 

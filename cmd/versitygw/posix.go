@@ -33,7 +33,11 @@ var (
 	sidecar            string
 	nometa             bool
 	forceNoTmpFile     bool
+	baseUrl            string
+	endpointPath       string
 )
+
+var skipdirs = cli.NewStringSlice("VisualDiscSpace")
 
 func posixCommand() *cli.Command {
 	return &cli.Command{
@@ -89,6 +93,24 @@ will be translated into the file /mnt/fs/gwroot/mybucket/a/b/c/myobject`,
 				EnvVars:     []string{"VGW_META_SIDECAR"},
 				Destination: &sidecar,
 			},
+			&cli.StringFlag{
+				Name:        "notify-base-url",
+				Usage:       "Base URL of the notification service (e.g. http://192.168.78.213:8080)",
+				EnvVars:     []string{"NOTIFY_BASE_URL"},
+				Destination: &baseUrl,
+			},
+			&cli.StringFlag{
+				Name:        "notify-endpoint-path",
+				Usage:       "API endpoint path for creating notification tasks (e.g. /oss/rest/restServer/creatArcTask)",
+				EnvVars:     []string{"NOTIFY_ENDPOINT_PATH"},
+				Destination: &endpointPath,
+			},
+			&cli.StringSliceFlag{
+				Name:    "skipdirs",
+				Usage:   "Directories to skip (can specify multiple times)",
+				EnvVars: []string{"SKIP_DIRS"},
+				Value:   skipdirs,
+			},
 			&cli.BoolFlag{
 				Name:        "nometa",
 				Usage:       "disable metadata storage",
@@ -120,6 +142,11 @@ func runPosix(ctx *cli.Context) error {
 		return fmt.Errorf("cannot use both nometa and sidecar metadata")
 	}
 
+	var directorship []string
+	for _, d := range skipdirs.Value() {
+		directorship = append(directorship, d)
+	}
+
 	opts := posix.PosixOpts{
 		ChownUID:       chownuid,
 		ChownGID:       chowngid,
@@ -127,6 +154,9 @@ func runPosix(ctx *cli.Context) error {
 		VersioningDir:  versioningDir,
 		NewDirPerm:     fs.FileMode(dirPerms),
 		ForceNoTmpFile: forceNoTmpFile,
+		BaseUrl:        baseUrl,
+		EndpointPath:   endpointPath,
+		Skipdirs:       directorship,
 	}
 
 	var ms meta.MetadataStorer
