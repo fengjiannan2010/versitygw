@@ -11,11 +11,12 @@ if not exist %OUTPUT_DIR% (
 )
 
 set CGO_ENABLED=1
-set LDFLAGS=-ldflags "-s -w -X main.Version=1.0.14 -X main.Build=netzon -X main.BuildTime=20250621"
+set LDFLAGS=-ldflags "-s -w -X main.Version=1.0.15 -X main.Build=netzon -X main.BuildTime=20250621"
 
 REM === 构建 linux/arm64 (64位 ARM，如树莓派 4/5、ARM 云主机等) ===
 echo Building for linux/arm64...
 set GOARCH=arm64
+set GOOS=linux
 
 go build %LDFLAGS% -o %OUTPUT_DIR%\netzongw-linux-arm64.exe %MAIN_FILE%
 echo Build complete. Output in %OUTPUT_DIR%

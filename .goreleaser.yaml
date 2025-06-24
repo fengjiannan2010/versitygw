@@ -7,16 +7,18 @@ before:
 builds:
   - goos:
       - linux
-      - windows
+      #- windows
     env:
-      - CGO_ENABLED=1
+      - CGO_ENABLED=0
     main: ./cmd/versitygw
-    binary: netzongw
+    binary: versitygw
     goarch:
-      - amd64
+      #- amd64
       - arm64
     ldflags:
-      - -X=main.Build=NETZON -X=main.BuildTime={{.Date}} -X=main.Version=1.0.14
+      - -X=main.Build=NETZON
+      - -X=main.BuildTime={{ .Date }}
+      - -X=main.Version={{ .Version }}
 
 archives:
   - formats: [ 'tar.gz' ]

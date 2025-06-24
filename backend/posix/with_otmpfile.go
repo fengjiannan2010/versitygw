@@ -154,6 +154,71 @@ func (tmp *tmpfile) falloc() error {
 	return nil
 }
 
+func (tmp *tmpfile) linkPart() error {
+	// make sure this is cleaned up in all error cases
+	defer tmp.f.Close()
+
+	// We use Linkat/Rename as the atomic operation for object puts. The
+	// upload is written to a temp (or unnamed/O_TMPFILE) file to not conflict
+	// with any other simultaneous uploads. The final operation is to move the
+	// temp file into place for the object. This ensures the object semantics
+	// of last upload completed wins and is not some combination of writes
+	// from simultaneous uploads.
+	objPath := tmp.objname
+	err := os.Remove(objPath)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("remove stale path: %w", err)
+	}
+
+	dir := filepath.Dir(objPath)
+
+	err = backend.MkdirAll(dir, tmp.uid, tmp.gid, tmp.needsChown, tmp.newDirPerm)
+	if err != nil {
+		return fmt.Errorf("make parent dir: %w", err)
+	}
+
+	if !tmp.isOTmp {
+		// O_TMPFILE not suported, use fallback
+		return tmp.fallbackLinkPart()
+	}
+
+	procdir, err := os.Open(procfddir)
+	if err != nil {
+		return fmt.Errorf("open proc dir: %w", err)
+	}
+	defer procdir.Close()
+
+	dirf, err := os.Open(dir)
+	if err != nil {
+		return fmt.Errorf("open parent dir: %w", err)
+	}
+	defer dirf.Close()
+
+	for {
+		err = unix.Linkat(int(procdir.Fd()), filepath.Base(tmp.f.Name()),
+			int(dirf.Fd()), filepath.Base(objPath), unix.AT_SYMLINK_FOLLOW)
+		if errors.Is(err, syscall.EEXIST) {
+			err := os.Remove(objPath)
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return fmt.Errorf("remove stale path: %w", err)
+			}
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("link tmpfile (fd %q as %q): %w",
+				filepath.Base(tmp.f.Name()), objPath, err)
+		}
+		break
+	}
+
+	err = tmp.f.Close()
+	if err != nil {
+		return fmt.Errorf("close tmpfile: %w", err)
+	}
+
+	return nil
+}
+
 func (tmp *tmpfile) link() error {
 	// make sure this is cleaned up in all error cases
 	defer tmp.f.Close()
@@ -219,6 +284,30 @@ func (tmp *tmpfile) link() error {
 	return nil
 }
 
+func (tmp *tmpfile) fallbackLinkPart() error {
+	tempname := tmp.f.Name()
+	// cleanup in case anything goes wrong, if rename succeeds then
+	// this will no longer exist
+	defer os.Remove(tempname)
+
+	// reset default file mode because CreateTemp uses 0600
+	tmp.f.Chmod(fs.FileMode(defaultFilePerm))
+
+	err := tmp.f.Close()
+	if err != nil {
+		return fmt.Errorf("close tmpfile: %w", err)
+	}
+
+	objPath := tmp.objname
+	err = os.Rename(tempname, objPath)
+	if err != nil {
+		// rename only works for files within the same filesystem
+		// if this fails fallback to copy
+		return backend.MoveFile(tempname, objPath, fs.FileMode(defaultFilePerm))
+	}
+	return nil
+}
+
 func (tmp *tmpfile) fallbackLink() error {
 	tempname := tmp.f.Name()
 	// cleanup in case anything goes wrong, if rename succeeds then
@@ -240,7 +329,6 @@ func (tmp *tmpfile) fallbackLink() error {
 		// if this fails fallback to copy
 		return backend.MoveFile(tempname, objPath, fs.FileMode(defaultFilePerm))
 	}
-
 	return nil
 }
 

@@ -16,13 +16,12 @@ package main
 
 import (
 	"fmt"
-	"io/fs"
-	"math"
-	"path/filepath"
-
 	"github.com/urfave/cli/v2"
 	"github.com/versity/versitygw/backend/meta"
 	"github.com/versity/versitygw/backend/posix"
+	"io/fs"
+	"math"
+	"path/filepath"
 )
 
 var (
