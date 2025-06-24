@@ -120,8 +120,7 @@ func initApp() *cli.App {
 	return &cli.App{
 		Usage: "NETZON S3 Gateway",
 		Description: `The NETZON S3 Gateway is an S3 protocol translator that allows an S3 client
-to access the supported backend storage as if it was a native S3 service.
-VersityGW is an open-source project licensed under the Apache 2.0 License. `,
+to access the supported backend storage as if it was a native S3 service. `,
 		Copyright: "Copyright (c) 2023-2024 NETZON Software",
 		Action: func(ctx *cli.Context) error {
 			return ctx.App.Command("help").Run(ctx)
@@ -134,7 +133,7 @@ func initFlags() []cli.Flag {
 	return []cli.Flag{
 		&cli.BoolFlag{
 			Name:    "version",
-			Usage:   "list versitygw version",
+			Usage:   "list netzongw version",
 			Aliases: []string{"v"},
 			Action: func(*cli.Context, bool) error {
 				fmt.Println("Version  :", Version)
@@ -569,8 +568,8 @@ func runGateway(ctx context.Context, be backend.Backend) error {
 	}
 
 	app := fiber.New(fiber.Config{
-		AppName:               "versitygw",
-		ServerHeader:          "VersityGW",
+		AppName:               "netzongw",
+		ServerHeader:          "NetzonGW",
 		StreamRequestBody:     true,
 		DisableKeepalive:      true,
 		Network:               fiber.NetworkTCP,
@@ -613,8 +612,8 @@ func runGateway(ctx context.Context, be backend.Backend) error {
 	}
 
 	admApp := fiber.New(fiber.Config{
-		AppName:               "versitygw",
-		ServerHeader:          "VersityGW",
+		AppName:               "netzongw",
+		ServerHeader:          "NetzonGW",
 		Network:               fiber.NetworkTCP,
 		DisableStartupMessage: true,
 	})
@@ -823,7 +822,7 @@ func printBanner(port, admPort string, ssl, admSsl bool) {
 		}
 	}
 
-	title := "VersityGW"
+	title := "NetzonGW"
 	version := fmt.Sprintf("Version %v, Build %v", Version, Build)
 	urls := []string{}
 

@@ -11,6 +11,7 @@ import (
 type ArcTaskRequest struct {
 	Path       string `json:"path"`
 	FerryLevel string `json:"ferryLevel"`
+	LoginName  string `json:"loginName"`
 }
 
 // ArcTaskResponse 表示 HTTP 响应的外层结构
@@ -49,6 +50,7 @@ func (n *ArcTaskNotifier) NotifyFileTransfer(path, ferryLevel string) (*ArcTaskR
 	reqBody := ArcTaskRequest{
 		Path:       path,
 		FerryLevel: ferryLevel,
+		LoginName:  "admin",
 	}
 
 	log.Printf("Request Json: %+v\n", reqBody)
