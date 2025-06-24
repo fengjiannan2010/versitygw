@@ -9,11 +9,11 @@ builds:
       - linux
       #- windows
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     main: ./cmd/versitygw
-    binary: versitygw
+    binary: netzongw
     goarch:
-      #- amd64
+      - amd64
       - arm64
     ldflags:
       - -X=main.Build=NETZON
@@ -62,12 +62,11 @@ changelog:
 nfpms:
   - id: packages
     package_name: versitygw
-    vendor: Versity Software
-    homepage: https://github.com/versity/versitygw
-    maintainer: Ben McClelland <ben.mcclelland@versity.com>
+    vendor: NETZON Software
+    homepage: https://github.com/netzon/netzongw
 
     description: |-
-      The Versity S3 Gateway.
+      The NETZON S3 Gateway.
       A high-performance tool facilitating translation between AWS S3 API
       requests and various backend storage systems, including POSIX file
       backend storage. Its stateless architecture enables deployment in
@@ -78,7 +77,7 @@ nfpms:
     license: Apache 2.0
 
     ids:
-      - versitygw
+      - netzongw
 
     formats:
       - deb
@@ -99,14 +98,14 @@ nfpms:
         posttrans: ./extra/posttrans.sh
 
     contents:
-      - src: extra/versitygw@.service
-        dst: /lib/systemd/system/versitygw@.service
+      - src: extra/netzongw@.service
+        dst: /lib/systemd/system/netzongw@.service
 
       - src: extra/example.conf
-        dst: /etc/versitygw.d/example.conf
+        dst: /etc/netzongw.d/example.conf
         type: config
   
-      - dst: /etc/versitygw.d
+      - dst: /etc/netzongw.d
         type: dir
         file_info:
           mode: 0700
