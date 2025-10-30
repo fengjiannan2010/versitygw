@@ -36,7 +36,7 @@ var (
 	endpointPath       string
 )
 
-var skipdirs = cli.NewStringSlice("VisualDiscSpace")
+var skipdirs = cli.NewStringSlice("VisualDiscSpace", "IsoBuffer")
 
 func posixCommand() *cli.Command {
 	return &cli.Command{

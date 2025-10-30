@@ -29,7 +29,18 @@ trap cleanup INT TERM EXIT
 
 # 启动 Delve 调试器（后台）
 echo "🚀 启动 Delve 远程调试服务..."
-dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./$BIN_NAME -- --port :11000 --access admin --secret admin posix --nometa /home/vgw &
+
+export ROOT_ACCESS_KEY="admin"
+export ROOT_SECRET_KEY="admin"
+export VGW_PORT=":11000"
+export NOTIFY_BASE_URL="http://192.168.11.17:8080"
+export NOTIFY_ENDPOINT_PATH="/oss/rest/restServer/creatArcTask"
+export VGW_META_NONE="true"
+export SKIP_DIRS="VisualDiscSpace,IsoBuffer"
+
+dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./$BIN_NAME posix /data/vol &
+
+
 # 记录 PID 并等待
 DLV_PID=$!
 echo "🆔 Delve PID: $DLV_PID"

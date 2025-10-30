@@ -467,21 +467,24 @@ func (p *Posix) CreateBucket(ctx context.Context, input *s3.CreateBucketInput, a
 }
 
 func (p *Posix) isBucketEmpty(bucket string) error {
+	// 版本控制目录检查
 	if p.versioningEnabled() {
 		ents, err := os.ReadDir(filepath.Join(p.versioningDir, bucket))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("readdir bucket: %w", err)
 		}
 		if err == nil {
-			//TODO 需要排除过滤文件或目录
-			if len(ents) == 1 && ents[0].Name() != p.skipdirs[0] {
-				return s3err.GetAPIError(s3err.ErrVersionedBucketNotEmpty)
-			} else if len(ents) > 1 {
+			// 过滤掉 skipdirs 中的目录
+			filteredEnts := filterSkippedDirs(ents, p.skipdirs)
+
+			// 检查过滤后的目录
+			if len(filteredEnts) > 0 {
 				return s3err.GetAPIError(s3err.ErrVersionedBucketNotEmpty)
 			}
 		}
 	}
 
+	// 常规目录检查
 	ents, err := os.ReadDir(bucket)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("readdir bucket: %w", err)
@@ -489,14 +492,33 @@ func (p *Posix) isBucketEmpty(bucket string) error {
 	if errors.Is(err, fs.ErrNotExist) {
 		return s3err.GetAPIError(s3err.ErrNoSuchBucket)
 	}
-	//TODO 需要排除过滤文件或目录
-	if len(ents) == 1 && ents[0].Name() != p.skipdirs[0] {
-		return s3err.GetAPIError(s3err.ErrBucketNotEmpty)
-	} else if len(ents) > 1 {
-		return s3err.GetAPIError(s3err.ErrBucketNotEmpty)
+	// 过滤掉 skipdirs 中的目录
+	filteredEnts := filterSkippedDirs(ents, p.skipdirs)
+
+	// 检查过滤后的目录
+	if len(filteredEnts) > 0 {
+		return s3err.GetAPIError(s3err.ErrVersionedBucketNotEmpty)
 	}
 
 	return nil
+}
+
+// 过滤掉 skipdirs 中的目录或文件
+func filterSkippedDirs(ents []fs.DirEntry, skipdirs []string) []fs.DirEntry {
+	filteredEnts := make([]fs.DirEntry, 0, len(ents))
+	for _, ent := range ents {
+		skip := false
+		for _, skipdir := range skipdirs {
+			if ent.Name() == skipdir {
+				skip = true
+				break
+			}
+		}
+		if !skip {
+			filteredEnts = append(filteredEnts, ent)
+		}
+	}
+	return filteredEnts
 }
 
 func (p *Posix) DeleteBucket(_ context.Context, bucket string) error {
@@ -5125,9 +5147,18 @@ func (p *Posix) runArcTaskNotify(path, ferryLevel string) error {
 		log.Printf("[runArcTaskNotify] 创建任务失败: %v", err)
 		return fmt.Errorf("创建任务失败: %w", err)
 	}
-	// 输出响应信息
-	log.Printf("[runArcTaskNotify] 任务创建成功！响应消息: %s, 任务ID: %s, 设备ID: %s, 错误路径: %s",
-		resp.Msg, data.TaskID, data.DevID, data.ErrorPaths)
+
+	if resp != nil && resp.Code == "0" {
+		if data != nil {
+			// 输出响应信息
+			log.Printf("[runArcTaskNotify] 任务创建成功！响应消息: %s, 任务ID: %s, 设备ID: %s, 错误路径: %s",
+				resp.Msg, data.TaskID, data.DevID, data.ErrorPaths)
+		} else {
+			log.Printf("[runArcTaskNotify] 任务创建成功！响应消息: %s, 编码: %s, 状态: %s",
+				resp.Msg, resp.Code, resp.State)
+		}
+	}
+
 	return nil
 }
 
